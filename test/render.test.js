@@ -28,10 +28,11 @@ async function loadRenderer() {
     slice('function noticeCard('),
     slice('function escapeHtml('),
     slice('function safeUrl('),
+    slice('function primaryCategory('),
     slice('function formatDate('),
     slice('function relativeTime('),
     'const categoryLabel = (id) => id;',
-    'return { noticeCard, escapeHtml, safeUrl };',
+    'return { noticeCard, escapeHtml, safeUrl, primaryCategory };',
   ].join('\n\n');
 
   // `safeUrl` resolves relative URLs against the page origin.
@@ -117,4 +118,33 @@ test('an inferred date is labelled as approximate', async () => {
   const { noticeCard } = await loadRenderer();
   assert.ok(noticeCard(notice({ dateInferred: true })).includes('Around'));
   assert.ok(noticeCard(notice({ dateInferred: false })).includes('Published'));
+});
+
+test('the feed is grouped by how recent a notice is', async () => {
+  const { noticeCard } = await loadRenderer();
+  // The card itself carries the category stripe colour; the grouping label is
+  // asserted separately below since it is a feed-level concern.
+  assert.match(noticeCard(notice({ categories: ['class10', 'class12'] })), /data-cat="class10"/);
+  assert.match(noticeCard(notice({ categories: ['other'] })), /data-cat="other"/);
+  // "other" never wins over a real stream.
+  assert.match(noticeCard(notice({ categories: ['other', 'neet'] })), /data-cat="neet"/);
+});
+
+test('date group labels are relative near today and absolute further back', async () => {
+  const src = await readFile(join(HERE, '..', 'public', 'js', 'app.js'), 'utf8');
+  const from = src.indexOf('function dateGroupLabel(');
+  const fn = new Function(`${src.slice(from, src.indexOf('\n}', from) + 2)}; return dateGroupLabel;`)();
+
+  const day = 86400000;
+  const iso = (offset) => new Date(Date.now() - offset).toISOString();
+
+  assert.equal(fn(iso(0)), 'Today');
+  assert.equal(fn(iso(day)), 'Yesterday');
+  assert.equal(fn(iso(3 * day)), 'This week');
+  assert.equal(fn(iso(10 * day)), 'Last week');
+  assert.equal(fn(iso(20 * day)), 'This month');
+  // Older than a month falls back to a month and year, not "N days ago".
+  assert.match(fn(iso(200 * day)), /^[A-Z][a-z]+ \d{4}$/);
+  assert.equal(fn(null), 'Undated');
+  assert.equal(fn('not a date'), 'Undated');
 });

@@ -254,7 +254,7 @@ function noticeCard(n, justIn = false) {
     .join('<span class="sep">·</span>');
 
   return `
-    <li class="notice ${n.isNew ? 'is-new' : ''} ${justIn ? 'just-in' : ''}" data-id="${escapeHtml(n.id)}">
+    <li class="notice ${n.isNew ? 'is-new' : ''} ${justIn ? 'just-in' : ''}" data-id="${escapeHtml(n.id)}" data-cat="${escapeHtml(primaryCategory(n))}">
       <div class="notice-body">
         <h3 class="notice-title">
           <a href="${escapeHtml(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a>
@@ -284,13 +284,51 @@ function safeUrl(url) {
   }
 }
 
+/** The colour a card is striped with: its first real category, else "other". */
+function primaryCategory(n) {
+  return (n.categories || []).find((c) => c !== 'other') || 'other';
+}
+
+/**
+ * Notices are scanned by date far more than they are read in order, so the
+ * feed is grouped under day headings. Relative labels only make sense for the
+ * last few days; past that an absolute month reads better.
+ */
+function dateGroupLabel(iso) {
+  if (!iso) return 'Undated';
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return 'Undated';
+
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((startOfDay(new Date()) - startOfDay(then)) / 86400000);
+
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return 'This week';
+  if (days < 14) return 'Last week';
+  if (days < 31) return 'This month';
+  return then.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
 function renderFeed() {
   const list = $('#noticeList');
-  list.innerHTML = state.notices.map((n) => noticeCard(n)).join('');
+
+  // Group headings are emitted inline rather than as nested lists, so the flat
+  // <li> structure the rest of the code relies on is unchanged.
+  let lastGroup = null;
+  list.innerHTML = state.notices
+    .map((n) => {
+      const group = dateGroupLabel(n.publishedAt || n.firstSeenAt);
+      const heading =
+        group === lastGroup ? '' : `<li class="date-label" aria-hidden="true">${escapeHtml(group)}</li>`;
+      lastGroup = group;
+      return heading + noticeCard(n);
+    })
+    .join('');
 
   const empty = state.notices.length === 0;
   $('#emptyState').hidden = !empty;
@@ -467,6 +505,17 @@ function intervalText(m) {
 }
 
 // ---------------------------------------------------------------- data
+
+/** Placeholder cards, so a slow first load is not a blank page. */
+function showSkeletons(count = 6) {
+  $('#noticeList').innerHTML = Array.from(
+    { length: count },
+    () =>
+      '<li class="skeleton"><div class="skeleton-line title"></div>' +
+      '<div class="skeleton-line"></div><div class="skeleton-line short"></div></li>'
+  ).join('');
+  $('#emptyState').hidden = true;
+}
 
 async function loadNotices({ append = false, force = false } = {}) {
   if (STATIC) return loadNoticesStatic({ append, force });
@@ -1274,6 +1323,7 @@ function closeSidebar() {
 
 async function main() {
   wireEvents();
+  showSkeletons();
 
   try {
     if (STATIC) {
