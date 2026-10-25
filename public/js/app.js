@@ -345,6 +345,19 @@ function renderFeed() {
   const scope = state.category === 'all' ? 'All notifications' : categoryLabel(state.category);
   $('#feedTitle').textContent = scope;
 
+  const sourceName =
+    state.source === 'all'
+      ? 'All sources'
+      : state.meta.sources.find((src) => src.id === state.source)?.label || state.source;
+  const eyebrow = $('#feedEyebrow');
+  if (eyebrow) {
+    eyebrow.textContent = state.query
+      ? `Search · ${state.query}`
+      : state.onlyNew
+        ? `Unread · ${sourceName}`
+        : sourceName;
+  }
+
   const bits = [`${state.total} notice${state.total === 1 ? '' : 's'}`];
   const unread = state.notices.filter((n) => n.isNew).length;
   if (unread) bits.push(`${unread} unread on this page`);

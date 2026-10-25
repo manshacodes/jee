@@ -15,14 +15,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
       media="print"
       onload="this.media='all'"
     />
     <noscript>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
       />
     </noscript>
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -83,17 +83,17 @@
       <!-- ---------------- sidebar ---------------- -->
       <aside class="sidebar" id="sidebar" aria-label="Categories and sources">
         <nav class="nav-group" aria-label="Categories">
-          <h2 class="nav-title">Categories</h2>
+          <h2 class="nav-title"><span>01</span> Categories</h2>
           <ul class="nav-list" id="categoryNav"></ul>
         </nav>
 
         <nav class="nav-group" aria-label="Sources">
-          <h2 class="nav-title">Sources</h2>
+          <h2 class="nav-title"><span>02</span> Sources</h2>
           <ul class="nav-list compact" id="sourceNav"></ul>
         </nav>
 
         <div class="nav-group">
-          <h2 class="nav-title">Notifications</h2>
+          <h2 class="nav-title"><span>03</span> Alerts</h2>
           <button class="btn ghost full" id="enablePush">
             <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10.3 21a2 2 0 0 0 3.4 0" />
@@ -114,7 +114,8 @@
       <!-- ---------------- main feed ---------------- -->
       <main class="content" id="feed">
         <div class="feed-head">
-          <div>
+          <div class="feed-headline">
+            <p class="feed-eyebrow" id="feedEyebrow">Live feed</p>
             <h1 id="feedTitle">All notifications</h1>
             <p class="feed-sub" id="feedSub">—</p>
           </div>
