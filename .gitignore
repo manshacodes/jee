@@ -1,0 +1,11 @@
+node_modules/
+
+# Runtime state: the scraped feed, the user's settings, their push
+# subscriptions, and the generated VAPID *private* key. None of this belongs
+# in version control.
+data/
+
+npm-debug.log*
+.env
+.env.local
+.DS_Store

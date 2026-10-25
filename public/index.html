@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exam Notice Radar</title>
+    <meta
+      name="description"
+      content="Live CBSE and NTA notifications for JEE, NEET UG and the Class 10 and 12 board exams."
+    />
+    <meta name="theme-color" content="#0b1220" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#feed">Skip to notifications</a>
+
+    <header class="topbar">
+      <button class="icon-btn only-mobile" id="menuToggle" aria-label="Show categories" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+      </button>
+
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2a9 9 0 1 0 9 9h-9z" /><circle cx="12" cy="11" r="2.4" /></svg>
+        </span>
+        <span class="brand-text">
+          <strong>Exam Notice Radar</strong>
+          <small>CBSE &amp; NTA · live notice feed</small>
+        </span>
+      </div>
+
+      <div class="topbar-actions">
+        <span class="status-pill" id="statusPill" role="status" aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="statusText">Loading…</span>
+        </span>
+
+        <button class="btn primary" id="fetchNow">
+          <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5" />
+          </svg>
+          <span>Fetch now</span>
+        </button>
+
+        <button class="icon-btn" id="themeToggle" aria-label="Switch theme" title="Switch theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2" />
+            <path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M19.1 4.9l-1.7 1.7M6.6 17.4l-1.7 1.7" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="settingsToggle" aria-label="Settings" aria-expanded="false" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2" />
+            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.3l-.1.1A2 2 0 1 1 4 16.5l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 7L4.6 7a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1A2 2 0 1 1 20.4 7l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- ---------------- sidebar ---------------- -->
+      <aside class="sidebar" id="sidebar" aria-label="Categories and sources">
+        <nav class="nav-group" aria-label="Categories">
+          <h2 class="nav-title">Categories</h2>
+          <ul class="nav-list" id="categoryNav"></ul>
+        </nav>
+
+        <nav class="nav-group" aria-label="Sources">
+          <h2 class="nav-title">Sources</h2>
+          <ul class="nav-list compact" id="sourceNav"></ul>
+        </nav>
+
+        <div class="nav-group">
+          <h2 class="nav-title">Notifications</h2>
+          <button class="btn ghost full" id="enablePush">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10.3 21a2 2 0 0 0 3.4 0" />
+            </svg>
+            <span id="enablePushLabel">Enable device alerts</span>
+          </button>
+          <p class="hint" id="pushHint">
+            Get a desktop or phone alert the moment a new notice is published.
+          </p>
+        </div>
+
+        <footer class="sidebar-foot">
+          <p id="lastRunText">—</p>
+          <p id="nextRunText"></p>
+        </footer>
+      </aside>
+
+      <!-- ---------------- main feed ---------------- -->
+      <main class="content" id="feed">
+        <div class="feed-head">
+          <div>
+            <h1 id="feedTitle">All notifications</h1>
+            <p class="feed-sub" id="feedSub">—</p>
+          </div>
+          <div class="feed-tools">
+            <label class="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input type="search" id="search" placeholder="Search notice titles…" aria-label="Search notice titles" />
+            </label>
+            <label class="switch small">
+              <input type="checkbox" id="onlyNew" />
+              <span class="track" aria-hidden="true"></span>
+              <span>Unread only</span>
+            </label>
+            <button class="btn ghost" id="markAllRead">Mark all read</button>
+          </div>
+        </div>
+
+        <div class="banner" id="newBanner" hidden>
+          <span id="newBannerText"></span>
+          <button class="btn tiny" id="newBannerShow">Show</button>
+        </div>
+
+        <div class="banner warn" id="errorBanner" hidden></div>
+
+        <ul class="notice-list" id="noticeList"></ul>
+
+        <div class="empty" id="emptyState" hidden>
+          <h3>Nothing here yet</h3>
+          <p id="emptyText">Hit “Fetch now” to pull the latest notices from CBSE and NTA.</p>
+        </div>
+
+        <button class="btn ghost full load-more" id="loadMore" hidden>Load older notices</button>
+      </main>
+    </div>
+
+    <!-- ---------------- settings drawer ---------------- -->
+    <div class="scrim" id="scrim" hidden></div>
+    <section class="drawer" id="settingsDrawer" aria-label="Settings" aria-hidden="true">
+      <header class="drawer-head">
+        <h2>Settings</h2>
+        <button class="icon-btn" id="settingsClose" aria-label="Close settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+
+      <div class="drawer-body">
+        <fieldset class="field">
+          <legend>Automatic fetching</legend>
+          <label class="switch">
+            <input type="checkbox" id="autoFetch" />
+            <span class="track" aria-hidden="true"></span>
+            <span>Fetch on a schedule</span>
+          </label>
+          <p class="hint">
+            With this off, notices are only pulled when you press <strong>Fetch now</strong>.
+          </p>
+
+          <label class="field-label" for="interval">How often</label>
+          <select id="interval"></select>
+          <p class="hint" id="intervalHint"></p>
+
+          <label class="field-label" for="customInterval">Or set your own (minutes)</label>
+          <div class="row">
+            <input type="number" id="customInterval" min="1" max="1440" step="1" placeholder="1–1440" />
+            <button class="btn ghost" id="customIntervalApply">Apply</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Device alerts</legend>
+          <label class="switch">
+            <input type="checkbox" id="pushEnabled" />
+            <span class="track" aria-hidden="true"></span>
+            <span>Send push notifications</span>
+          </label>
+          <p class="hint">Alert me only about these categories (none selected = all):</p>
+          <div class="chips" id="pushCategories"></div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Appearance</legend>
+          <div class="segmented" id="themeChoice" role="radiogroup" aria-label="Theme">
+            <button role="radio" aria-checked="false" data-theme="light">Light</button>
+            <button role="radio" aria-checked="false" data-theme="dark">Dark</button>
+            <button role="radio" aria-checked="true" data-theme="system">System</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Source health</legend>
+          <ul class="source-health" id="sourceHealth"></ul>
+        </fieldset>
+      </div>
+    </section>
+
+    <div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+    <script src="/js/app.js" type="module"></script>
+  </body>
+</html>
