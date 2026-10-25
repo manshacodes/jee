@@ -138,3 +138,35 @@ test('the merge box exists, since localStorage cannot see other computers', asyn
   assert.ok(html.includes('id="mergeApply"'), 'no way to apply a merge');
   assert.ok(html.includes('id="mergeResult"'), 'a merge gives no feedback');
 });
+
+test('merging keeps devices from the paste AND from this browser', () => {
+  // The owner has two devices registered in her browser; she pastes the
+  // friend's one-device value. All three must survive -- merging only the
+  // paste with the current device would quietly drop her other one.
+  const fromPaste = [device('friend-phone')];
+  const knownHere = [device('owner-laptop'), device('owner-phone')];
+
+  let merged = fromPaste;
+  for (const sub of knownHere) merged = mergeSubscriptions(JSON.stringify(merged), sub);
+  merged = mergeSubscriptions(JSON.stringify(merged), device('owner-laptop'));
+
+  assert.equal(merged.length, 3);
+  assert.deepEqual(merged.map((s) => s.endpoint.split('/').pop()).sort(), [
+    'friend-phone',
+    'owner-laptop',
+    'owner-phone',
+  ]);
+});
+
+test('a malformed stored key is rejected instead of failing deep in subscribe', async () => {
+  const { isValidVapidPublicKey } = await import(`file://${MODULE}`);
+  const good = await generateVapidKeys();
+  assert.equal(isValidVapidPublicKey(good.publicKey), true);
+
+  for (const bad of ['', 'k', 'not base64!!', 'a'.repeat(87), null, undefined, 123]) {
+    assert.equal(isValidVapidPublicKey(bad), false, `accepted ${JSON.stringify(bad)}`);
+  }
+  // Right alphabet and length, but not an uncompressed point.
+  const wrongPrefix = 'A'.repeat(87);
+  assert.equal(isValidVapidPublicKey(wrongPrefix), false);
+});

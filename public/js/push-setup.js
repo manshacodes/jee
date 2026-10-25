@@ -35,6 +35,22 @@ export async function generateVapidKeys() {
   return { publicKey: b64url(raw), privateKey: jwk.d };
 }
 
+/**
+ * A VAPID public key is 65 raw bytes starting with 0x04 (an uncompressed P-256
+ * point). Anything else -- a truncated paste, stale localStorage from an older
+ * build -- would otherwise surface as a cryptic atob() failure deep inside
+ * subscribe, so it is checked up front and treated as "no key".
+ */
+export function isValidVapidPublicKey(key) {
+  if (typeof key !== 'string' || !/^[A-Za-z0-9_-]+$/.test(key)) return false;
+  try {
+    const bytes = urlBase64ToUint8Array(key);
+    return bytes.length === 65 && bytes[0] === 0x04;
+  } catch {
+    return false;
+  }
+}
+
 export function pushSupported() {
   return (
     typeof window !== 'undefined' &&

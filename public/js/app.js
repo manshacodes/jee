@@ -9,6 +9,7 @@
 import {
   generateVapidKeys,
   iosNeedsInstall,
+  isValidVapidPublicKey,
   mergeSubscriptions,
   pushSupported,
   subscribeDevice,
@@ -846,15 +847,22 @@ async function runPushSetup() {
     const saved = readSetup();
     // The public key must be the same for every device, since one private key
     // signs for all of them: reuse the published one, or the one this device
-    // generated earlier, before making a new pair.
+    // generated earlier, before making a new pair. A stored key that is not a
+    // valid one is ignored rather than allowed to fail obscurely later.
     const published = staticCache?.meta?.vapidPublicKey || null;
-    let keys =
-      published && saved.privateKey && saved.publicKey === published
-        ? { publicKey: saved.publicKey, privateKey: saved.privateKey }
-        : null;
-    if (!keys && published) keys = { publicKey: published, privateKey: null };
-    if (!keys && saved.publicKey && saved.privateKey) keys = saved;
-    if (!keys) keys = await generateVapidKeys();
+    const publishedOk = isValidVapidPublicKey(published);
+    const savedOk = isValidVapidPublicKey(saved.publicKey);
+
+    let keys = null;
+    if (publishedOk && savedOk && saved.privateKey && saved.publicKey === published) {
+      keys = { publicKey: saved.publicKey, privateKey: saved.privateKey };
+    } else if (publishedOk) {
+      keys = { publicKey: published, privateKey: null };
+    } else if (savedOk && saved.privateKey) {
+      keys = { publicKey: saved.publicKey, privateKey: saved.privateKey };
+    } else {
+      keys = await generateVapidKeys();
+    }
 
     const subscription = await subscribeDevice(keys.publicKey);
     const merged = mergeSubscriptions(saved.subscriptions, subscription);
@@ -1000,11 +1008,26 @@ function applyMerge() {
       'Some entries had no endpoint or keys, so they were left out. Check what you pasted.';
   }
 
-  const merged = mergeSubscriptions(JSON.stringify(usable), lastDeviceSubscription);
+  // Merge three sources, not two: what was pasted, every device registered in
+  // this browser before, and this device. Merging only the paste and the
+  // current device would drop the user's other devices -- the exact failure
+  // this box exists to prevent, just in the other direction.
+  const saved = readSetup();
+  let merged = usable;
+  let known = [];
+  try {
+    const stored = JSON.parse(saved.subscriptions || '[]');
+    known = Array.isArray(stored) ? stored : [stored];
+  } catch {
+    known = [];
+  }
+  for (const sub of known) {
+    if (sub?.endpoint && sub?.keys) merged = mergeSubscriptions(JSON.stringify(merged), sub);
+  }
+  merged = mergeSubscriptions(JSON.stringify(merged), lastDeviceSubscription);
   const added = merged.length > usable.length;
 
   // Keep localStorage in step, so re-running setup here does not undo the merge.
-  const saved = readSetup();
   writeSetup({ ...saved, subscriptions: JSON.stringify(merged) });
 
   const block = document.getElementById('secret-PUSH_SUBSCRIPTIONS');

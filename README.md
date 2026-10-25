@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 141 unit/integration tests
+npm test            # 143 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -186,8 +186,15 @@ feedback between finishing setup and the next real notice, which may be days.
 The setup remembers devices registered in *that browser*, so a second computer
 or a second person would otherwise produce a value that silently replaces
 everyone already registered. Open **Someone else's device is already
-registered** in the dialog, paste the current value of `PUSH_SUBSCRIPTIONS`,
-and press Merge; the output then covers all of them.
+registered** in the dialog, paste the other device's value, and press Merge;
+the output covers everything — what was pasted, every device registered in this
+browser, and this one.
+
+Note that **a GitHub secret cannot be read back** once saved, only replaced. So
+the value to merge comes from the other person running the setup on their
+device, not from the repository settings page. The usual shape is: they set up,
+send you their value, you paste it into the merge box on your device, and you
+replace the secret with the result.
 
 **Forking does not give someone their own alerts.** Forks copy code, never
 secrets, and a device registered on *your* site is locked to *your* signing
@@ -365,7 +372,7 @@ server/
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
   js/push-setup.js  browser-side VAPID generation and device subscription
-test/               141 tests, parsers included (served from HTTP fixtures)
+test/               143 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There
