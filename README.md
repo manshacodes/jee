@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 131 unit/integration tests
+npm test            # 136 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -164,6 +164,18 @@ published public key and only extend the device list.
 **On iPhone and iPad**, Apple only allows web notifications once the site is on
 your home screen: Share → *Add to Home Screen*, open it from there, then run the
 setup. Android and desktop work directly.
+
+**Once set up, the site does not need to be open** — not even the tab. The
+browser keeps a small background listener that the push wakes. Your device does
+need to be on and online, and on a Mac, Chrome has to be running rather than
+fully quit.
+
+**To check it worked**, go to Actions → *Scrape notices and publish site* → **Run
+workflow**, tick **Send a test notification**, and run it. That sends a sample
+alert to every channel you have configured and does no scraping. The run's log
+names each channel and, if one is misconfigured, says why — a mistyped secret
+shows up as "not valid JSON" rather than as silence. Without this there is no
+feedback between finishing setup and the next real notice, which may be days.
 
 <details>
 <summary>Optional: push alerts through ntfy instead</summary>
@@ -332,7 +344,7 @@ server/
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
   js/push-setup.js  browser-side VAPID generation and device subscription
-test/               131 tests, parsers included (served from HTTP fixtures)
+test/               136 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

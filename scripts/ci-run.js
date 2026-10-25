@@ -4,9 +4,13 @@
  *
  * Differs from the long-running server in three ways: it keeps its state in a
  * committed file rather than a disk the next run would not see, it sends
- * alerts through ntfy rather than Web Push, and it never exits non-zero for a
+ * alerts to channels that need no server to hold subscriptions (a GitHub
+ * issue, browser push from secrets, ntfy), and it never exits non-zero for a
  * single dead source -- a failing notice board must not turn the repo's CI
  * red every half hour.
+ *
+ * With TEST_ALERT=true it sends a sample alert and does no scraping, so a
+ * user can confirm their setup instead of waiting for the boards to publish.
  */
 import { appendFile } from 'node:fs/promises';
 
@@ -17,6 +21,62 @@ import { isConfigured as issueConfigured, notifyIssue } from '../server/notify-i
 import { isConfigured as webPushConfigured, notifyWebPush } from '../server/notify-webpush.js';
 
 const SITE_URL = process.env.SITE_URL || '';
+
+/**
+ * A test alert, so the user can confirm their setup works without waiting for
+ * the boards to publish something. Without this there is no feedback at all
+ * between finishing setup and the next real notice, which could be days.
+ */
+if (process.env.TEST_ALERT === 'true') {
+  const sample = [
+    {
+      title: 'Test alert — your notifications are working',
+      url: SITE_URL || 'https://github.com',
+      sourceLabel: 'Exam Notice Radar',
+      categories: ['other'],
+      publishedAt: null,
+      dateInferred: false,
+    },
+  ];
+
+  console.log('Sending a test alert to every configured channel.\n');
+  let any = false;
+
+  if (webPushConfigured()) {
+    const push = await notifyWebPush(sample, { siteUrl: SITE_URL });
+    any = true;
+    if (push.reason) {
+      console.log(`popups: NOT sent — ${push.reason}`);
+    } else {
+      console.log(
+        `popups: sent to ${push.sent} device(s)` +
+          (push.failed ? `, ${push.failed} failed` : '') +
+          (push.gone.length ? `, ${push.gone.length} expired (re-run setup on that device)` : '')
+      );
+    }
+  } else {
+    console.log(
+      'popups: not configured. Add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and ' +
+        'PUSH_SUBSCRIPTIONS as repository secrets using the values the site gave you.'
+    );
+  }
+
+  if (process.env.NOTIFY_ISSUE !== 'false') {
+    const issue = await notifyIssue(sample, { siteUrl: SITE_URL });
+    any = true;
+    console.log(issue.sent ? `email: issue opened — ${issue.url}` : `email: NOT sent — ${issue.reason}`);
+  }
+
+  if (ntfyConfigured()) {
+    const ntfy = await notifyNtfy(sample, { siteUrl: SITE_URL });
+    any = true;
+    console.log(ntfy.sent ? 'ntfy: sent' : `ntfy: NOT sent — ${ntfy.reason}`);
+  }
+
+  if (!any) console.log('No alert channel is configured, so nothing was sent.');
+  console.log('\nNo scraping was done for a test run.');
+  process.exit(0);
+}
 
 const result = await runIngest({ trigger: 'scheduled' });
 

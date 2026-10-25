@@ -7,6 +7,11 @@ on:
     # under load, so treat this as "about every half hour", not to the second.
     - cron: '*/30 * * * *'
   workflow_dispatch: # the "Run workflow" button, for an immediate scrape
+    inputs:
+      test_alert:
+        description: 'Send a test notification to check your alert setup'
+        type: boolean
+        default: false
   push:
     branches: [claude/cbse-nta-notification-scraper-aj1xpy]
     paths-ignore: ['site-data/**']
@@ -58,6 +63,7 @@ jobs:
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           SITE_URL: ${{ format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
           INSECURE_TLS_HOSTS: ${{ vars.INSECURE_TLS_HOSTS }}
+          TEST_ALERT: ${{ inputs.test_alert }}
         run: node scripts/ci-run.js
 
       - name: Commit the updated feed
