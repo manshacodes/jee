@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 94 unit/integration tests
+npm test            # 111 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -105,16 +105,36 @@ the same UI to Pages. **Public repositories get unlimited Actions minutes and
 free Pages hosting**, which is what makes this work.
 
 1. **Settings → Pages → Source: GitHub Actions.**
-2. **Settings → Secrets and variables → Actions → New repository secret:**
-   `NTFY_TOPIC`, set to a long, unguessable string — say
-   `jee-notices-7f3a9c21`. Anyone who knows the topic can read your alerts and
-   send you fake ones, so treat it as a password rather than a name.
-3. **Actions → "Scrape notices and publish site" → Run workflow.** The first
+2. **Actions → "Scrape notices and publish site" → Run workflow.** The first
    run seeds the feed and publishes the site.
-4. Install the [ntfy app](https://ntfy.sh) on your phone or desktop and
-   subscribe to that same topic.
 
-Your site lands at `https://<user>.github.io/<repo>/`.
+Your site lands at `https://<user>.github.io/<repo>/`. That is the whole setup.
+
+#### Alerts, with nothing to install
+
+When a scrape finds something new it **opens an issue on this repo**, and
+GitHub emails you about it, because you automatically watch repositories you
+own. No app, no account anywhere else, no credentials — it uses the token
+Actions already hands the workflow.
+
+The issue lists each new notice with a direct link to the board's PDF, so the
+email alone is usually enough. Open issues double as a read queue: close one
+once you have dealt with it.
+
+If the first email does not arrive, check
+[notification settings](https://github.com/settings/notifications) — "Watching"
+should have **Email** ticked. Set the repository variable `NOTIFY_ISSUE` to
+`false` to turn the issues off.
+
+<details>
+<summary>Optional: push alerts through ntfy instead</summary>
+
+If you would rather have a phone push than an email, add a repository secret
+`NTFY_TOPIC` set to a long, unguessable string (say `jee-notices-7f3a9c21`),
+then install the [ntfy app](https://ntfy.sh) and subscribe to that topic.
+Anyone who knows the topic can read your alerts and send you fake ones, so
+treat it as a password rather than a name. Both channels can run at once.
+</details>
 
 The schedule is the `cron` in
 [`.github/workflows/scrape.yml`](.github/workflows/scrape.yml) — `*/30 * * * *`
@@ -129,11 +149,12 @@ published feed. Unread badges become per-device, derived from a high-water mark
 in `localStorage` rather than shared state — which is arguably better, since
 your phone and laptop each track what they have seen.
 
-**Why ntfy rather than Web Push here.** Web Push needs the server to store each
-device's subscription endpoint. In a public repo that file would be world
-readable, and anyone could then push notifications to your phone. ntfy inverts
-it: the device subscribes, and the only secret is the topic name, which stays
-in an Actions secret. Run the server locally and you get real Web Push instead.
+**Why not Web Push here.** Web Push needs a server to store each device's
+subscription endpoint. There is no server, and in a public repo that file would
+be world readable — anyone could then push notifications to your phone. So the
+static build sends alerts by GitHub issue (and optionally ntfy) instead, and
+the push controls are disabled with a note saying why. Run the server locally
+and you get real Web Push.
 
 ### Paid: a real server
 
@@ -266,10 +287,11 @@ server/
   infer-dates.js    fills undated rows from list position
   fetcher.js        HTTP with retry/backoff and per-host TLS opt-out
   push.js           Web Push: VAPID, category filters, prunes dead devices
-  notify-ntfy.js    ntfy alerts, used by the Actions run instead of Web Push
+  notify-issue.js   opens a GitHub issue per batch; GitHub emails you about it
+  notify-ntfy.js    optional ntfy push, for anyone who prefers an app
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
-test/               94 tests, parsers included (served from HTTP fixtures)
+test/               111 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

@@ -18,6 +18,7 @@ concurrency:
 
 permissions:
   contents: write # commit the updated feed
+  issues: write # open an issue per batch of new notices, which GitHub emails you
   pages: write # publish the site
   id-token: write # required by deploy-pages
 
@@ -39,7 +40,12 @@ jobs:
         id: scrape
         env:
           DATA_DIR: ./site-data
-          # Set these in Settings -> Secrets and variables -> Actions.
+          # Alerts by GitHub issue need no setup: GitHub emails you about the
+          # issue because you watch your own repo. Set the repository variable
+          # NOTIFY_ISSUE to "false" to turn it off.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTIFY_ISSUE: ${{ vars.NOTIFY_ISSUE }}
+          # Optional second channel, for anyone who wants a push app instead.
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}

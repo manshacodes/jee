@@ -12,7 +12,8 @@ import { appendFile } from 'node:fs/promises';
 
 import { runIngest } from '../server/ingest.js';
 import { getNotices } from '../server/store.js';
-import { isConfigured, notifyNtfy } from '../server/notify-ntfy.js';
+import { isConfigured as ntfyConfigured, notifyNtfy } from '../server/notify-ntfy.js';
+import { isConfigured as issueConfigured, notifyIssue } from '../server/notify-issue.js';
 
 const SITE_URL = process.env.SITE_URL || '';
 
@@ -27,16 +28,31 @@ for (const s of result.sources) {
 const total = (await getNotices()).length;
 console.log(`\nnew: ${result.added}, stored: ${total}`);
 
-let alert = { sent: false, reason: 'nothing new' };
+// Two independent channels, both optional, neither allowed to fail the run.
+//   - a GitHub issue, which GitHub then emails to the repo owner. No app and
+//     no credentials: it uses the token Actions already provides.
+//   - ntfy, for anyone who prefers a push app.
 if (result.addedNotices.length) {
-  alert = await notifyNtfy(result.addedNotices, { siteUrl: SITE_URL });
-  console.log(
-    alert.sent
-      ? `alert: sent ${result.addedNotices.length} notice(s) to ntfy`
-      : `alert: not sent (${alert.reason})`
-  );
-} else if (!isConfigured()) {
-  console.log('alert: NTFY_TOPIC not set, so no alerts will be sent');
+  const wanted = process.env.NOTIFY_ISSUE !== 'false';
+  if (wanted) {
+    const issue = await notifyIssue(result.addedNotices, { siteUrl: SITE_URL });
+    console.log(
+      issue.sent
+        ? `alert: opened issue #${issue.number} (${issue.url})`
+        : `alert: no issue opened (${issue.reason})`
+    );
+  }
+
+  if (ntfyConfigured()) {
+    const ntfy = await notifyNtfy(result.addedNotices, { siteUrl: SITE_URL });
+    console.log(ntfy.sent ? 'alert: sent to ntfy' : `alert: ntfy not sent (${ntfy.reason})`);
+  }
+
+  if (!wanted && !ntfyConfigured()) {
+    console.log('alert: no channel enabled, so nothing was sent');
+  }
+} else if (!issueConfigured() && !ntfyConfigured()) {
+  console.log('alert: no channel configured, so no alerts will be sent');
 }
 
 // Surface the outcome in the workflow summary and to later steps.
