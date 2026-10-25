@@ -190,3 +190,45 @@ test('cheerio skips HTML comments, which is what keeps expired rows out', () => 
   const $ = cheerio.load('<ul class="list"><li>live</li><!-- <li>dead</li> --></ul>');
   assert.equal($('ul.list li').length, 1);
 });
+
+test('links with a dangerous scheme never enter the feed', async () => {
+  // These hrefs come from pages we do not control, and `new URL()` accepts
+  // javascript:/data: happily, so the scheme is filtered at parse time.
+  const hostile = `
+    <html><body>
+      <div class="gen-list"><ul>
+        <li><a download href="javascript:alert(document.cookie)">Click for the JEE 2027 result notice</a></li>
+        <li><a download href="data:text/html,<script>alert(1)</script>">Download the NEET notice document</a></li>
+        <li><a download href="https://cdnbbsr.s3waas.gov.in/s3a/uploads/2026/10/20261024390682350.pdf">A genuine public notice document</a></li>
+      </ul></div>
+    </body></html>`;
+  const srv = await fixtureServer({ '/hostile': hostile });
+  try {
+    const { items } = await scrapeNta({ pages: [{ url: `${srv.origin}/hostile` }] });
+    assert.equal(items.length, 1, 'only the real document should survive');
+    assert.ok(items[0].url.startsWith('https://'));
+    assert.ok(
+      items.every((i) => /^https?:$/.test(new URL(i.url).protocol)),
+      'a non-http(s) scheme reached the store'
+    );
+  } finally {
+    await srv.close();
+  }
+});
+
+test('CBSE parser also rejects dangerous schemes', async () => {
+  const hostile = `
+    <html><body><ul class="list">
+      <li class="list-new"><a href="javascript:alert(1)">Board examination result notice</a> 07/10/2026 </li>
+      <li class="list-new"><a href="documents/real_circular.pdf">A genuine circular (1 MB)</a> 07/10/2026 </li>
+    </ul></body></html>`;
+  const srv = await fixtureServer({ '/c': hostile });
+  try {
+    const { items } = await scrapeCbse({ pages: [{ url: `${srv.origin}/c` }] });
+    assert.equal(items.length, 1);
+    assert.equal(items[0].title, 'A genuine circular');
+    assert.ok(items[0].url.startsWith('https://www.cbse.gov.in/'));
+  } finally {
+    await srv.close();
+  }
+});

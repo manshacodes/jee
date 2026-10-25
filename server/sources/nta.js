@@ -88,9 +88,17 @@ function looksLikeNotice(href, hasDownloadAttr) {
   return false;
 }
 
+/**
+ * Resolve a link against its page, rejecting anything that is not http(s).
+ * `new URL()` happily accepts `javascript:` and `data:`, and these hrefs come
+ * from pages we do not control, so the scheme is checked before a notice can
+ * enter the store.
+ */
 function absolutise(href, pageUrl) {
   try {
-    return new URL(href, pageUrl).toString();
+    const url = new URL(href, pageUrl);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return url.toString();
   } catch {
     return null;
   }

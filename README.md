@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 62 unit/integration tests
+npm test            # 71 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -153,7 +153,7 @@ server/
   push.js           Web Push: VAPID, category filters, prunes dead devices
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
-test/               62 tests, parsers included (served from HTTP fixtures)
+test/               71 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There
@@ -169,6 +169,11 @@ your push subscriptions and the VAPID private key.
   stays patched.
 - **No authentication.** Anyone who can reach the port can change the fetch
   interval. Put it behind a reverse proxy or keep it on your own machine.
+- **Scraped content is treated as untrusted.** Notice titles, URLs and section
+  names come from pages nobody here controls, so links are restricted to
+  `http(s)` at parse time (a `javascript:` href never reaches the store) and
+  every scraped value is HTML-escaped before it is rendered.
+  `test/render.test.js` runs the real card template against injection payloads.
 - **Always confirm against the official site** before acting on anything here.
   This is a convenience reader over four public notice boards, not an official
   channel; titles are reproduced as published and every notice links back to

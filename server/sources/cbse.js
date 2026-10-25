@@ -86,7 +86,12 @@ export async function scrapeCbse(source) {
       function pushItem(title, raw, date) {
         let url;
         try {
-          url = new URL(raw, BASE).toString();
+          // Reject anything that is not http(s): `new URL()` accepts
+          // `javascript:` and `data:`, and these hrefs come from a page we do
+          // not control.
+          const parsed = new URL(raw, BASE);
+          if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return;
+          url = parsed.toString();
         } catch {
           return;
         }

@@ -172,7 +172,7 @@ function renderSidebar() {
 
 function noticeCard(n, justIn = false) {
   const chips = n.categories
-    .map((c) => `<span class="chip" data-cat="${c}">${categoryLabel(c)}</span>`)
+    .map((c) => `<span class="chip" data-cat="${escapeHtml(c)}">${escapeHtml(categoryLabel(c))}</span>`)
     .join('');
   const published = formatDate(n.publishedAt);
   // The boards leave some rows undated; we place those by list position, so
@@ -182,15 +182,18 @@ function noticeCard(n, justIn = false) {
       ? `Around ${published}`
       : `Published ${published}`
     : `Seen ${relativeTime(n.firstSeenAt)}`;
+  // Titles, URLs, sections and labels all come from scraped third-party pages,
+  // so every one of them is escaped before it reaches the DOM.
   const meta = [n.sourceLabel, n.section, dateText]
     .filter(Boolean)
+    .map(escapeHtml)
     .join('<span class="sep">·</span>');
 
   return `
-    <li class="notice ${n.isNew ? 'is-new' : ''} ${justIn ? 'just-in' : ''}" data-id="${n.id}">
+    <li class="notice ${n.isNew ? 'is-new' : ''} ${justIn ? 'just-in' : ''}" data-id="${escapeHtml(n.id)}">
       <div class="notice-body">
         <h3 class="notice-title">
-          <a href="${n.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a>
+          <a href="${escapeHtml(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a>
         </h3>
         <div class="notice-meta">
           ${chips}
@@ -202,6 +205,19 @@ function noticeCard(n, justIn = false) {
         <span class="count">${n.dateInferred ? '~' : ''}${relativeTime(n.publishedAt || n.firstSeenAt)}</span>
       </div>
     </li>`;
+}
+
+/**
+ * Only ever emit an http(s) link. A scraped `javascript:` or `data:` URL would
+ * otherwise run on click, and escaping alone does not stop that.
+ */
+function safeUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '#';
+  } catch {
+    return '#';
+  }
 }
 
 function escapeHtml(s) {
@@ -294,8 +310,8 @@ function renderSourceHealth(lastRun) {
       (s) => `
       <li>
         <span class="state ${s.ok ? '' : 'bad'}" aria-hidden="true"></span>
-        <span>${s.label}</span>
-        <span class="n">${s.count}</span>
+        <span>${escapeHtml(s.label)}</span>
+        <span class="n">${escapeHtml(String(s.count))}</span>
         ${s.errors.length ? `<p class="why">${escapeHtml(s.errors[0])}</p>` : ''}
       </li>`
     )
