@@ -62,13 +62,21 @@ await writeFile(
   'utf8'
 );
 
-// Flip the front end into static mode, and bust the cache per build so a
-// refresh never shows a stale feed.
+// Flip the front end into static mode, and bust the cache per build.
+//
+// Every versioned asset needs the stamp, not just the script: GitHub Pages and
+// Vercel both serve CSS with a cache lifetime, so a stylesheet-only change
+// (a redesign, say) would otherwise reach people who already have the page
+// cached as the old stylesheet over the new markup.
 const stamp = Date.now();
 const html = await readFile(join(PUBLIC, 'index.html'), 'utf8');
 await writeFile(
   join(OUT, 'index.html'),
   html
+    .replace(
+      '<link rel="stylesheet" href="/css/app.css" />',
+      `<link rel="stylesheet" href="./css/app.css?v=${stamp}" />`
+    )
     .replace(
       '<script src="/js/app.js" type="module"></script>',
       `<script>window.NOTICE_RADAR_STATIC = ${JSON.stringify({ build: stamp })};</script>\n` +

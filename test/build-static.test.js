@@ -120,8 +120,14 @@ test('the assets the page references are actually present', async () => {
   }
 });
 
-test('the build is cache-busted so a reload cannot show a stale feed', () => {
-  const stamp = /src="\.\/js\/app\.js\?v=(\d+)"/.exec(html);
-  assert.ok(stamp, 'no cache-busting stamp on the script');
-  assert.ok(Number(stamp[1]) > 0);
+test('every versioned asset is cache-busted, not just the script', () => {
+  // A stylesheet-only change (a redesign) would otherwise reach people who
+  // already have the page cached, as old CSS over new markup.
+  const js = /src="\.\/js\/app\.js\?v=(\d+)"/.exec(html);
+  const css = /href="\.\/css\/app\.css\?v=(\d+)"/.exec(html);
+  assert.ok(js, 'no cache-busting stamp on the script');
+  assert.ok(css, 'no cache-busting stamp on the stylesheet');
+  assert.equal(js[1], css[1], 'the script and stylesheet carry different stamps');
+  assert.ok(Number(js[1]) > 0);
+  assert.ok(!/href="\.\/css\/app\.css"/.test(html), 'an unstamped stylesheet link survived');
 });
