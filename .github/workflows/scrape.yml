@@ -1,0 +1,92 @@
+name: Scrape notices and publish site
+
+# Runs in GitHub's cloud, so nothing needs to stay on at home.
+on:
+  schedule:
+    # Every 30 minutes. GitHub queues scheduled jobs and may run them late
+    # under load, so treat this as "about every half hour", not to the second.
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # the "Run workflow" button, for an immediate scrape
+  push:
+    branches: [claude/cbse-nta-notification-scraper-aj1xpy]
+    paths-ignore: ['site-data/**']
+
+concurrency:
+  # Never let two scrapes race to commit the feed.
+  group: scrape
+  cancel-in-progress: false
+
+permissions:
+  contents: write # commit the updated feed
+  pages: write # publish the site
+  id-token: write # required by deploy-pages
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Scrape and send alerts
+        id: scrape
+        env:
+          DATA_DIR: ./site-data
+          # Set these in Settings -> Secrets and variables -> Actions.
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          SITE_URL: ${{ format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
+          INSECURE_TLS_HOSTS: ${{ vars.INSECURE_TLS_HOSTS }}
+        run: node scripts/ci-run.js
+
+      - name: Commit the updated feed
+        run: |
+          # Only the feed is committed; settings and keys are per-deployment.
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add site-data/notifications.json
+          if git diff --cached --quiet; then
+            echo "no change to the feed"
+          else
+            git commit -m "Update notices (${{ steps.scrape.outputs.added }} new, ${{ steps.scrape.outputs.total }} stored)"
+            # Another run may have pushed while this one scraped.
+            for i in 1 2 3; do
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
+              sleep $((i * 5))
+            done
+            echo "could not push the feed after 3 attempts" >&2
+            exit 1
+          fi
+
+      - name: Build the static site
+        env:
+          DATA_DIR: ./site-data
+          STATIC_OUT: ./dist
+        run: node scripts/build-static.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: scrape
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

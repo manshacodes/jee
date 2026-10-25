@@ -8,6 +8,21 @@
 
 const $ = (sel) => document.querySelector(sel);
 
+/**
+ * Two deployment shapes share this file.
+ *
+ * Server mode talks to the Express API: it can scrape on demand, change the
+ * schedule, and register Web Push.
+ *
+ * Static mode is what GitHub Pages serves. There is no backend, so the feed
+ * comes from notices.json baked at build time by the scheduled scrape, and the
+ * controls that need a server are disabled rather than hidden -- it should be
+ * obvious why they are inert. Unread state is per-device, derived from a
+ * high-water mark in localStorage instead of a server flag.
+ */
+const STATIC = Boolean(window.NOTICE_RADAR_STATIC);
+const SEEN_KEY = 'lastSeenAt';
+
 const state = {
   meta: null,
   settings: null,
@@ -44,6 +59,46 @@ async function api(path, options = {}) {
     throw new Error(message);
   }
   return res.json();
+}
+
+/** All notices, loaded once in static mode and filtered client-side. */
+let staticCache = null;
+
+async function loadStaticFeed({ force = false } = {}) {
+  if (staticCache && !force) return staticCache;
+  const bust = force ? `?t=${Date.now()}` : '';
+  const [notices, meta] = await Promise.all([
+    fetch(`./notices.json${bust}`, { cache: force ? 'reload' : 'default' }).then((r) => {
+      if (!r.ok) throw new Error(`Could not load the feed (${r.status})`);
+      return r.json();
+    }),
+    fetch(`./meta.json${bust}`).then((r) => (r.ok ? r.json() : {})),
+  ]);
+  staticCache = { ...notices, meta };
+  return staticCache;
+}
+
+/** A notice is "new" on this device if we had not seen the feed by then. */
+function markUnread(notices) {
+  let watermark = '';
+  try {
+    watermark = localStorage.getItem(SEEN_KEY) || '';
+  } catch {
+    /* private mode */
+  }
+  return notices.map((n) => ({
+    ...n,
+    isNew: Boolean(watermark) && (n.firstSeenAt || '') > watermark,
+  }));
+}
+
+function rememberSeen(generatedAt) {
+  try {
+    const previous = localStorage.getItem(SEEN_KEY) || '';
+    if (generatedAt > previous) localStorage.setItem(SEEN_KEY, generatedAt);
+  } catch {
+    /* private mode */
+  }
 }
 
 function toast(message, kind = '') {
@@ -334,6 +389,7 @@ function renderErrorBanner(lastRun) {
 
 function renderSettings() {
   const s = state.settings;
+  if (STATIC) return renderSettingsStatic();
   $('#autoFetch').checked = s.autoFetch;
   $('#pushEnabled').checked = s.pushEnabled;
 
@@ -364,6 +420,36 @@ function renderSettings() {
   applyTheme(s.theme);
 }
 
+/**
+ * Static builds keep the scheduling and alert controls visible but inert, with
+ * a line saying where that job actually lives -- hiding them would just raise
+ * the question of where the settings went.
+ */
+function renderSettingsStatic() {
+  const s = state.settings;
+  const workflow = staticCache?.meta?.workflowUrl;
+
+  $('#autoFetch').checked = true;
+  $('#autoFetch').disabled = true;
+  $('#interval').disabled = true;
+  $('#interval').innerHTML = '<option>Set in the GitHub Actions workflow</option>';
+  $('#customInterval').disabled = true;
+  $('#customIntervalApply').disabled = true;
+  $('#intervalHint').innerHTML =
+    'Scraping runs on a schedule in GitHub Actions, not in this page. ' +
+    'Change the cron in <code>.github/workflows/scrape.yml</code>' +
+    (workflow ? ` · <a href="${escapeHtml(workflow)}" target="_blank" rel="noopener">view runs</a>` : '') +
+    '.';
+
+  $('#pushEnabled').checked = false;
+  $('#pushEnabled').disabled = true;
+  $('#pushCategories').innerHTML =
+    '<p class="hint">Alerts are sent by the scheduled job through ntfy. ' +
+    'Subscribe to your topic in the ntfy app to receive them.</p>';
+
+  applyTheme(s.theme);
+}
+
 function intervalText(m) {
   if (m < 60) return `Every ${m} minutes`;
   if (m === 60) return 'Every hour';
@@ -373,7 +459,9 @@ function intervalText(m) {
 
 // ---------------------------------------------------------------- data
 
-async function loadNotices({ append = false } = {}) {
+async function loadNotices({ append = false, force = false } = {}) {
+  if (STATIC) return loadNoticesStatic({ append, force });
+
   const params = new URLSearchParams({
     category: state.category,
     source: state.source,
@@ -391,7 +479,37 @@ async function loadNotices({ append = false } = {}) {
   renderSidebar();
 }
 
+/** The server-side filters, applied in the browser. */
+async function loadNoticesStatic({ append = false, force = false } = {}) {
+  const feed = await loadStaticFeed({ force });
+  const all = markUnread(feed.notices);
+
+  const filtered = all.filter((n) => {
+    if (state.category !== 'all' && !n.categories.includes(state.category)) return false;
+    if (state.source !== 'all' && n.sourceId !== state.source) return false;
+    if (state.onlyNew && !n.isNew) return false;
+    if (state.query && !n.title.toLowerCase().includes(state.query.toLowerCase())) return false;
+    return true;
+  });
+
+  state.limit = append ? state.limit + PAGE : PAGE;
+  state.notices = filtered.slice(0, state.limit);
+  state.total = filtered.length;
+
+  const counts = { all: all.length, new: all.filter((n) => n.isNew).length };
+  for (const c of state.meta.categories) {
+    const bucket = all.filter((n) => n.categories.includes(c.id));
+    counts[c.id] = bucket.length;
+    counts[`${c.id}:new`] = bucket.filter((n) => n.isNew).length;
+  }
+  state.counts = counts;
+
+  renderFeed();
+  renderSidebar();
+}
+
 async function refreshStatus() {
+  if (STATIC) return refreshStatusStatic();
   const status = await api('/api/status');
   state.settings = status.settings;
   state.counts = status.counts;
@@ -399,9 +517,60 @@ async function refreshStatus() {
   return status;
 }
 
+/** In static mode the "status" is just when the last scheduled scrape ran. */
+async function refreshStatusStatic() {
+  const feed = await loadStaticFeed();
+  const generatedAt = feed.generatedAt;
+
+  $('#statusPill').dataset.state = 'live';
+  $('#statusText').textContent = `Updated ${relativeTime(generatedAt)}`;
+  $('#fetchNow').disabled = false;
+  $('#fetchNow').classList.remove('spinning');
+  $('#fetchNow').querySelector('span:not(.btn-icon)').textContent = 'Reload';
+  $('#fetchNow').title = 'Reload the feed. Scraping runs on a schedule in GitHub Actions.';
+
+  $('#lastRunText').textContent = `Last scrape ${relativeTime(generatedAt)}`;
+  $('#nextRunText').textContent = 'Scheduled by GitHub Actions';
+
+  $('#errorBanner').hidden = true;
+  const health = $('#sourceHealth');
+  if (health) {
+    health.innerHTML = (feed.meta?.sources || [])
+      .map(
+        (src) =>
+          `<li><span class="state" aria-hidden="true"></span><span>${escapeHtml(src.label)}</span>` +
+          `<span class="n">${feed.notices.filter((n) => n.sourceId === src.id).length}</span></li>`
+      )
+      .join('');
+  }
+  return { settings: state.settings };
+}
+
 // ---------------------------------------------------------------- actions
 
 async function fetchNow() {
+  if (STATIC) {
+    const btn = $('#fetchNow');
+    btn.classList.add('spinning');
+    try {
+      const before = staticCache?.generatedAt;
+      await loadStaticFeed({ force: true });
+      await loadNotices();
+      await refreshStatus();
+      toast(
+        staticCache.generatedAt === before
+          ? 'Already showing the latest scrape.'
+          : 'Feed reloaded.',
+        'good'
+      );
+    } catch (err) {
+      toast(`Could not reload: ${err.message}`, 'bad');
+    } finally {
+      btn.classList.remove('spinning');
+    }
+    return;
+  }
+
   const btn = $('#fetchNow');
   btn.disabled = true;
   btn.classList.add('spinning');
@@ -428,6 +597,14 @@ async function fetchNow() {
 }
 
 async function saveSettings(patch) {
+  if (STATIC) {
+    // Theme is the only setting a static build can honour; it lives in
+    // localStorage. The rest belong to the scraper, which runs in CI.
+    state.settings = { ...state.settings, ...patch };
+    if (patch.theme) applyTheme(patch.theme);
+    renderSettings();
+    return state.settings;
+  }
   try {
     const next = await api('/api/settings', { method: 'PUT', body: patch });
     state.settings = next;
@@ -442,6 +619,11 @@ async function saveSettings(patch) {
 }
 
 async function markAllRead() {
+  if (STATIC) {
+    rememberSeen(staticCache?.generatedAt || new Date().toISOString());
+    await loadNotices();
+    return;
+  }
   try {
     const { counts } = await api('/api/notifications/read', { method: 'POST', body: { ids: [] } });
     state.counts = counts;
@@ -477,6 +659,18 @@ async function syncPushButton() {
   const btn = $('#enablePush');
   const label = $('#enablePushLabel');
   const hint = $('#pushHint');
+
+  if (STATIC) {
+    // No server to hold a Web Push subscription; alerts come from the
+    // scheduled job via ntfy instead.
+    btn.disabled = true;
+    label.textContent = 'Alerts via ntfy';
+    hint.innerHTML =
+      'This build has no server, so alerts are sent by the scheduled scrape ' +
+      'through <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy.sh</a>. ' +
+      'Install the ntfy app and subscribe to your topic to get them on this device.';
+    return;
+  }
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     btn.disabled = true;
@@ -727,9 +921,18 @@ function wireEvents() {
     saveSettings({ pushCategories: [...current] });
   });
 
-  // Keep relative timestamps honest without a full re-render storm.
+  // Keep relative timestamps honest without a full re-render storm. In static
+  // mode this also picks up a scrape that landed while the tab sat open.
   setInterval(() => {
-    if (!document.hidden) refreshStatus().catch(() => {});
+    if (document.hidden) return;
+    if (STATIC) {
+      loadStaticFeed({ force: true })
+        .then(() => loadNotices())
+        .then(() => refreshStatus())
+        .catch(() => {});
+      return;
+    }
+    refreshStatus().catch(() => {});
   }, 60000);
 }
 
@@ -744,12 +947,28 @@ function closeSidebar() {
 
 async function main() {
   wireEvents();
+
   try {
-    state.meta = await api('/api/meta');
+    if (STATIC) {
+      const feed = await loadStaticFeed();
+      state.meta = {
+        categories: feed.meta.categories,
+        sources: feed.meta.sources,
+        intervalChoices: [],
+        defaults: {},
+        vapidPublicKey: null,
+      };
+      state.settings = { theme: readStoredTheme(), pushCategories: [] };
+    } else {
+      state.meta = await api('/api/meta');
+    }
   } catch (err) {
     $('#statusPill').dataset.state = 'error';
-    $('#statusText').textContent = 'Server unreachable';
-    toast(`Cannot reach the server: ${err.message}`, 'bad');
+    $('#statusText').textContent = STATIC ? 'Feed unavailable' : 'Server unreachable';
+    toast(
+      STATIC ? `Could not load the feed: ${err.message}` : `Cannot reach the server: ${err.message}`,
+      'bad'
+    );
     return;
   }
 
@@ -757,9 +976,16 @@ async function main() {
   renderSidebar();
   renderSettings();
   await loadNotices();
+  await syncPushButton();
+
+  if (STATIC) {
+    // Mark everything read once the user has actually seen this build, so the
+    // next scheduled scrape is what lights up the badges.
+    window.addEventListener('beforeunload', () => rememberSeen(staticCache?.generatedAt || ''));
+    return;
+  }
 
   await registerServiceWorker();
-  await syncPushButton();
   connectStream();
 
   // Clicking a notification opens the link; the worker asks us to refresh too.
@@ -769,6 +995,14 @@ async function main() {
       refreshStatus().catch(() => {});
     }
   });
+}
+
+function readStoredTheme() {
+  try {
+    return localStorage.getItem('theme') || 'system';
+  } catch {
+    return 'system';
+  }
 }
 
 main();

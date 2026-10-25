@@ -1,9 +1,16 @@
 node_modules/
 
-# Runtime state: the scraped feed, the user's settings, their push
-# subscriptions, and the generated VAPID *private* key. None of this belongs
-# in version control.
+# Runtime state for a local run: the scraped feed, the user's settings, their
+# push subscriptions, and the generated VAPID *private* key. None of this
+# belongs in version control.
 data/
+
+# Built by scripts/build-static.js and published by the workflow; never committed.
+dist/
+
+# NOTE: site-data/ is deliberately NOT ignored. It holds the feed the scheduled
+# GitHub Actions scrape commits, which is both the state for the next run and
+# the data the published site is built from.
 
 npm-debug.log*
 .env

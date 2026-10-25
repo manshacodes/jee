@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 78 unit/integration tests
+npm test            # 94 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -95,9 +95,52 @@ them "Around 5 Oct 2026" rather than claiming a date the board never published.
 
 ## Deploying it
 
-It needs a real server: the scrapers run server-side (a browser cannot fetch
-these sites cross-origin), and the scheduler and push sender need a process
-that stays up. A `Dockerfile` is included, plus blueprints for two hosts.
+There are two shapes, and the free one is the default.
+
+### Free: GitHub Actions + GitHub Pages (recommended)
+
+No server, no card, nothing running at home. A scheduled workflow does the
+scraping in GitHub's cloud, commits the feed, and publishes a static build of
+the same UI to Pages. **Public repositories get unlimited Actions minutes and
+free Pages hosting**, which is what makes this work.
+
+1. **Settings → Pages → Source: GitHub Actions.**
+2. **Settings → Secrets and variables → Actions → New repository secret:**
+   `NTFY_TOPIC`, set to a long, unguessable string — say
+   `jee-notices-7f3a9c21`. Anyone who knows the topic can read your alerts and
+   send you fake ones, so treat it as a password rather than a name.
+3. **Actions → "Scrape notices and publish site" → Run workflow.** The first
+   run seeds the feed and publishes the site.
+4. Install the [ntfy app](https://ntfy.sh) on your phone or desktop and
+   subscribe to that same topic.
+
+Your site lands at `https://<user>.github.io/<repo>/`.
+
+The schedule is the `cron` in
+[`.github/workflows/scrape.yml`](.github/workflows/scrape.yml) — `*/30 * * * *`
+by default. GitHub queues scheduled jobs and runs them late under load, so
+treat it as "about every half hour". Below ~15 minutes you are mostly
+generating skipped runs.
+
+**What the static build gives up.** With no server there is nothing to scrape
+on demand or re-schedule from the page, so those controls are visible but
+disabled and say where the job actually lives. *Reload* re-fetches the
+published feed. Unread badges become per-device, derived from a high-water mark
+in `localStorage` rather than shared state — which is arguably better, since
+your phone and laptop each track what they have seen.
+
+**Why ntfy rather than Web Push here.** Web Push needs the server to store each
+device's subscription endpoint. In a public repo that file would be world
+readable, and anyone could then push notifications to your phone. ntfy inverts
+it: the device subscribes, and the only secret is the topic name, which stays
+in an Actions secret. Run the server locally and you get real Web Push instead.
+
+### Paid: a real server
+
+Only worth it if you want Web Push proper, on-demand scraping, or a private
+feed. The scrapers run server-side (a browser cannot fetch these sites
+cross-origin), and the scheduler and push sender need a process that stays up.
+A `Dockerfile` is included, plus blueprints for two hosts.
 
 **Set a password.** `APP_PASSWORD` turns on an HTTP Basic gate over the whole
 app. Without it, anyone with the URL can read your feed and change your fetch
@@ -114,14 +157,18 @@ Without them the app generates its own into `DATA_DIR` on first boot, which is
 fine locally — but on a host without a persistent disk they are regenerated on
 every deploy, silently breaking every phone and laptop subscription.
 
-### A warning about free tiers
+#### Host costs, as of early 2026
 
-**Render's free plan sleeps a web service after ~15 minutes without traffic.**
-A sleeping service runs no scheduled fetches and sends no notifications; it
-only wakes when someone loads the page. For a notification app that removes
-the point of it. Either use Render's paid plan, or deploy to Fly.io, where
-`min_machines_running = 1` in the included `fly.toml` keeps it awake on the
-free allowance.
+Neither has a usable free tier for this:
+
+- **Render free sleeps a service after ~15 minutes without traffic.** A
+  sleeping service runs no scheduled fetches and sends no notifications, which
+  removes the point of it. Starter is $7/month.
+- **Fly.io no longer has a free tier** (it ended for new organisations in
+  October 2024). `shared-cpu-1x` with 512MB is roughly $3.19/month;
+  `min_machines_running = 1` in the included `fly.toml` keeps it awake.
+
+Check both pricing pages before relying on these numbers.
 
 ### Fly.io
 
@@ -204,6 +251,10 @@ no push permission needed.
 ## Layout
 
 ```
+.github/workflows/  scheduled scrape + Pages publish (the free deployment)
+scripts/
+  ci-run.js         one scrape for Actions: commits state, alerts via ntfy
+  build-static.js   bakes the feed into a static site for Pages
 Dockerfile          production image; render.yaml / fly.toml are host blueprints
 server/
   index.js          Express app, REST API, SSE stream
@@ -215,9 +266,10 @@ server/
   infer-dates.js    fills undated rows from list position
   fetcher.js        HTTP with retry/backoff and per-host TLS opt-out
   push.js           Web Push: VAPID, category filters, prunes dead devices
+  notify-ntfy.js    ntfy alerts, used by the Actions run instead of Web Push
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
-test/               78 tests, parsers included (served from HTTP fixtures)
+test/               94 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There
