@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 111 unit/integration tests
+npm test            # 131 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -126,6 +126,28 @@ If the first email does not arrive, check
 should have **Email** ticked. Set the repository variable `NOTIFY_ISSUE` to
 `false` to turn the issues off.
 
+#### Popup notifications, also free
+
+For the Google-Calendar-style popup on your laptop or phone, open the site and
+press **Turn on popup alerts** in the sidebar. It walks you through one short
+setup and hands you two or three values to paste into the same Actions secrets
+page. After that, popups arrive on their own.
+
+Why the manual paste: sending a push does not need a server — it is one signed
+request per device — but *remembering which devices to notify* normally does.
+In a public repo that list cannot be committed, since anyone could read it and
+push fake alerts to your phone. Actions secrets are private even on a public
+repo, so that is where the list lives, and the only way to put something in a
+secret is to paste it.
+
+The VAPID key pair is generated in your browser with Web Crypto, so nothing has
+to be installed. The first device generates it; later devices reuse the
+published public key and only extend the device list.
+
+**On iPhone and iPad**, Apple only allows web notifications once the site is on
+your home screen: Share → *Add to Home Screen*, open it from there, then run the
+setup. Android and desktop work directly.
+
 <details>
 <summary>Optional: push alerts through ntfy instead</summary>
 
@@ -149,12 +171,11 @@ published feed. Unread badges become per-device, derived from a high-water mark
 in `localStorage` rather than shared state — which is arguably better, since
 your phone and laptop each track what they have seen.
 
-**Why not Web Push here.** Web Push needs a server to store each device's
-subscription endpoint. There is no server, and in a public repo that file would
-be world readable — anyone could then push notifications to your phone. So the
-static build sends alerts by GitHub issue (and optionally ntfy) instead, and
-the push controls are disabled with a note saying why. Run the server locally
-and you get real Web Push.
+**Alerts in the static build** come from the scheduled run rather than from a
+server holding subscriptions: a GitHub issue (which GitHub emails you), real
+Web Push once you have pasted the setup values into Actions secrets, and
+optionally ntfy. All three can run at once. Running the server locally instead
+manages Web Push subscriptions itself, with no pasting.
 
 ### Paid: a real server
 
@@ -288,10 +309,12 @@ server/
   fetcher.js        HTTP with retry/backoff and per-host TLS opt-out
   push.js           Web Push: VAPID, category filters, prunes dead devices
   notify-issue.js   opens a GitHub issue per batch; GitHub emails you about it
+  notify-webpush.js browser popups from CI, using devices held in a secret
   notify-ntfy.js    optional ntfy push, for anyone who prefers an app
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
-test/               111 tests, parsers included (served from HTTP fixtures)
+  js/push-setup.js  browser-side VAPID generation and device subscription
+test/               131 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

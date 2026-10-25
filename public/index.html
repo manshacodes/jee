@@ -194,6 +194,50 @@
       </div>
     </section>
 
+    <!-- ------------- push setup (static builds only) ------------- -->
+    <dialog class="setup" id="pushSetup" aria-labelledby="pushSetupTitle">
+      <header class="setup-head">
+        <h2 id="pushSetupTitle">Turn on popup alerts</h2>
+        <button class="icon-btn" id="pushSetupClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+
+      <div class="setup-body" id="pushSetupBody">
+        <p class="setup-intro">
+          This gets you notifications like Google Calendar's — a popup on this device even when
+          the site is closed. It is free. Because the site has no server, the one-time step below
+          stores your device in your repository's secrets, which stay private.
+        </p>
+
+        <div class="setup-step" id="stepSubscribe">
+          <h3><span class="step-n">1</span> Allow notifications</h3>
+          <p class="hint" id="subscribeHint">Your browser will ask for permission.</p>
+          <button class="btn primary" id="pushSubscribe">Allow and continue</button>
+        </div>
+
+        <div class="setup-step" id="stepCopy" hidden>
+          <h3><span class="step-n">2</span> Add these to your repository</h3>
+          <p class="hint">
+            Open
+            <a id="secretsLink" href="#" target="_blank" rel="noopener">Settings → Secrets and variables → Actions</a>,
+            and add each one with <strong>New repository secret</strong>. Name and value must match exactly.
+          </p>
+          <div id="secretList"></div>
+        </div>
+
+        <div class="setup-step" id="stepDone" hidden>
+          <h3><span class="step-n">3</span> That's it</h3>
+          <p class="hint">
+            The next scheduled check will send a popup here whenever a new notice appears. To add
+            another device, open this page on it and run through these steps again — the values
+            will already include the devices you have added.
+          </p>
+          <button class="btn" id="pushSetupFinish">Done</button>
+        </div>
+      </div>
+    </dialog>
+
     <div class="toast-stack" id="toasts" aria-live="polite"></div>
 
     <script src="/js/app.js" type="module"></script>

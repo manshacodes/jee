@@ -6,6 +6,14 @@
  * a Web Push service worker for alerts when the tab is closed.
  */
 
+import {
+  generateVapidKeys,
+  iosNeedsInstall,
+  mergeSubscriptions,
+  pushSupported,
+  subscribeDevice,
+} from './push-setup.js';
+
 const $ = (sel) => document.querySelector(sel);
 
 /**
@@ -661,14 +669,20 @@ async function syncPushButton() {
   const hint = $('#pushHint');
 
   if (STATIC) {
-    // No server to hold a Web Push subscription; alerts come from the
-    // scheduled job via ntfy instead.
-    btn.disabled = true;
-    label.textContent = 'Alerts via ntfy';
-    hint.innerHTML =
-      'This build has no server, so alerts are sent by the scheduled scrape ' +
-      'through <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy.sh</a>. ' +
-      'Install the ntfy app and subscribe to your topic to get them on this device.';
+    if (!pushSupported()) {
+      btn.disabled = true;
+      label.textContent = 'Popups not supported';
+      hint.textContent =
+        'This browser cannot show notifications. You still get an email for every new notice.';
+      return;
+    }
+    btn.disabled = false;
+    const on = Boolean(await currentSubscription());
+    label.textContent = on ? 'Popup alerts are set up' : 'Turn on popup alerts';
+    hint.innerHTML = on
+      ? 'This device is registered. Open this again to re-copy the values for your repository.'
+      : 'Get a popup on this device the moment a notice appears — like a calendar reminder. ' +
+        'Free; one short setup.';
     return;
   }
 
@@ -705,7 +719,17 @@ async function syncPushButton() {
     : 'Get a desktop or phone alert the moment a new notice is published.';
 }
 
+async function currentSubscription() {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    return (await reg?.pushManager.getSubscription()) || null;
+  } catch {
+    return null;
+  }
+}
+
 async function togglePush() {
+  if (STATIC) return openPushSetup();
   const reg = (await navigator.serviceWorker.getRegistration()) || (await registerServiceWorker());
   if (!reg) return toast('Could not start the notification worker.', 'bad');
 
@@ -738,6 +762,152 @@ async function togglePush() {
     toast(`Could not enable alerts: ${err.message}`, 'bad');
   }
   return syncPushButton();
+}
+
+// ---------------------------------------------------------------- push setup
+
+/** Remembered so a second device can be merged rather than overwrite the first. */
+const SETUP_KEY = 'pushSetup';
+
+function readSetup() {
+  try {
+    return JSON.parse(localStorage.getItem(SETUP_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function writeSetup(value) {
+  try {
+    localStorage.setItem(SETUP_KEY, JSON.stringify(value));
+  } catch {
+    /* private mode: the user just re-copies the values */
+  }
+}
+
+function openPushSetup() {
+  const dialog = $('#pushSetup');
+  $('#stepCopy').hidden = true;
+  $('#stepDone').hidden = true;
+  $('#pushSubscribe').disabled = false;
+
+  const repo = staticCache?.meta?.repo;
+  $('#secretsLink').href = repo
+    ? `https://github.com/${repo}/settings/secrets/actions`
+    : 'https://docs.github.com/actions/security-guides/encrypted-secrets';
+
+  $('#subscribeHint').innerHTML = iosNeedsInstall()
+    ? '<strong>On iPhone and iPad</strong>, Apple only allows notifications once the site is ' +
+      'on your home screen. Tap Share, then “Add to Home Screen”, open it from there, and come back.'
+    : 'Your browser will ask for permission.';
+
+  dialog.showModal();
+}
+
+function secretBlock(name, value, note) {
+  const id = `secret-${name}`;
+  return `
+    <div class="secret">
+      <div class="secret-head">
+        <span class="secret-name">${escapeHtml(name)}</span>
+        <button class="btn tiny" data-copy="${id}">Copy</button>
+      </div>
+      <pre class="secret-value" id="${id}">${escapeHtml(value)}</pre>
+    </div>
+    ${note ? `<p class="hint">${note}</p>` : ''}`;
+}
+
+async function runPushSetup() {
+  const btn = $('#pushSubscribe');
+  btn.disabled = true;
+  btn.textContent = 'Waiting for permission…';
+
+  try {
+    const saved = readSetup();
+    // The public key must be the same for every device, since one private key
+    // signs for all of them: reuse the published one, or the one this device
+    // generated earlier, before making a new pair.
+    const published = staticCache?.meta?.vapidPublicKey || null;
+    let keys =
+      published && saved.privateKey && saved.publicKey === published
+        ? { publicKey: saved.publicKey, privateKey: saved.privateKey }
+        : null;
+    if (!keys && published) keys = { publicKey: published, privateKey: null };
+    if (!keys && saved.publicKey && saved.privateKey) keys = saved;
+    if (!keys) keys = await generateVapidKeys();
+
+    const subscription = await subscribeDevice(keys.publicKey);
+    const merged = mergeSubscriptions(saved.subscriptions, subscription);
+
+    writeSetup({
+      publicKey: keys.publicKey,
+      privateKey: keys.privateKey || saved.privateKey || null,
+      subscriptions: JSON.stringify(merged),
+    });
+
+    const privateKey = keys.privateKey || saved.privateKey;
+    const blocks = [];
+
+    if (!published) {
+      blocks.push(
+        secretBlock('VAPID_PUBLIC_KEY', keys.publicKey),
+        privateKey
+          ? secretBlock('VAPID_PRIVATE_KEY', privateKey)
+          : `<p class="setup-note">This device could not recover the private key. Run the setup
+             again on the device you first used, or delete the two VAPID secrets and start over
+             here.</p>`
+      );
+    }
+
+    blocks.push(
+      secretBlock(
+        'PUSH_SUBSCRIPTIONS',
+        JSON.stringify(merged),
+        merged.length > 1
+          ? `Covers all ${merged.length} of your devices — replace the whole value.`
+          : 'This is this device. Adding another later will update this value.'
+      )
+    );
+
+    if (published) {
+      blocks.push(
+        `<p class="hint">Your repository already has the signing keys, so only the device list
+         changes.</p>`
+      );
+    }
+
+    $('#secretList').innerHTML = blocks.join('\n');
+    $('#stepCopy').hidden = false;
+    $('#stepDone').hidden = false;
+    btn.textContent = 'Allowed ✓';
+    $('#stepCopy').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Allow and continue';
+    if (err.code === 'denied') {
+      $('#subscribeHint').innerHTML =
+        'Notifications are blocked for this site. Allow them in your browser’s site settings ' +
+        '(the icon beside the address bar), then try again. Emails still arrive either way.';
+    } else {
+      toast(`Could not set up popups: ${err.message}`, 'bad');
+    }
+  }
+}
+
+async function copySecret(id) {
+  const text = document.getElementById(id)?.textContent || '';
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Copied.', 'good');
+  } catch {
+    // Clipboard access needs a secure context and permission; select instead.
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById(id));
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    toast('Press Ctrl/Cmd+C to copy the selected text.');
+  }
 }
 
 // ---------------------------------------------------------------- SSE
@@ -862,6 +1032,15 @@ function wireEvents() {
   });
 
   $('#enablePush').addEventListener('click', togglePush);
+
+  $('#pushSubscribe')?.addEventListener('click', runPushSetup);
+  $('#pushSetupClose')?.addEventListener('click', () => $('#pushSetup').close());
+  $('#pushSetupFinish')?.addEventListener('click', () => $('#pushSetup').close());
+  $('#pushSetup')?.addEventListener('close', () => syncPushButton().catch(() => {}));
+  $('#secretList')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-copy]');
+    if (btn) copySecret(btn.dataset.copy);
+  });
 
   // settings drawer
   const openDrawer = () => {

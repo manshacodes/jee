@@ -14,6 +14,7 @@ import { runIngest } from '../server/ingest.js';
 import { getNotices } from '../server/store.js';
 import { isConfigured as ntfyConfigured, notifyNtfy } from '../server/notify-ntfy.js';
 import { isConfigured as issueConfigured, notifyIssue } from '../server/notify-issue.js';
+import { isConfigured as webPushConfigured, notifyWebPush } from '../server/notify-webpush.js';
 
 const SITE_URL = process.env.SITE_URL || '';
 
@@ -43,15 +44,34 @@ if (result.addedNotices.length) {
     );
   }
 
+  if (webPushConfigured()) {
+    const push = await notifyWebPush(result.addedNotices, { siteUrl: SITE_URL });
+    if (push.reason) {
+      console.log(`alert: no popups sent (${push.reason})`);
+    } else {
+      console.log(
+        `alert: popups sent to ${push.sent} device(s)` +
+          (push.failed ? `, ${push.failed} failed` : '') +
+          (push.gone.length ? `, ${push.gone.length} expired` : '')
+      );
+      if (push.gone.length) {
+        console.log(
+          '      a device is no longer reachable; re-run the setup on it and update ' +
+            'the PUSH_SUBSCRIPTIONS secret'
+        );
+      }
+    }
+  }
+
   if (ntfyConfigured()) {
     const ntfy = await notifyNtfy(result.addedNotices, { siteUrl: SITE_URL });
     console.log(ntfy.sent ? 'alert: sent to ntfy' : `alert: ntfy not sent (${ntfy.reason})`);
   }
 
-  if (!wanted && !ntfyConfigured()) {
+  if (!wanted && !ntfyConfigured() && !webPushConfigured()) {
     console.log('alert: no channel enabled, so nothing was sent');
   }
-} else if (!issueConfigured() && !ntfyConfigured()) {
+} else if (!issueConfigured() && !ntfyConfigured() && !webPushConfigured()) {
   console.log('alert: no channel configured, so no alerts will be sent');
 }
 

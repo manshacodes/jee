@@ -45,7 +45,14 @@ jobs:
           # NOTIFY_ISSUE to "false" to turn it off.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NOTIFY_ISSUE: ${{ vars.NOTIFY_ISSUE }}
-          # Optional second channel, for anyone who wants a push app instead.
+          # Browser popup notifications. The site's "Turn on popup alerts"
+          # flow produces all three values; they stay private as secrets even
+          # though the repo is public.
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+          # Optional extra channel, for anyone who wants a push app instead.
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
@@ -76,6 +83,8 @@ jobs:
         env:
           DATA_DIR: ./site-data
           STATIC_OUT: ./dist
+          # Published into meta.json so a second device reuses the same key.
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
         run: node scripts/build-static.js
 
       - uses: actions/configure-pages@v5

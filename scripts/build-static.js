@@ -51,6 +51,9 @@ await writeFile(
     sources: SOURCES.map((s) => ({ id: s.id, label: s.label, homepage: s.homepage })),
     intervalChoices: [],
     static: true,
+    // Safe to publish by design -- it is the key browsers check signatures
+    // against. The private half stays in the Actions secret.
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY || null,
     repo: process.env.GITHUB_REPOSITORY || null,
     workflowUrl: process.env.GITHUB_REPOSITORY
       ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions`
