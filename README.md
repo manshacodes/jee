@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 136 unit/integration tests
+npm test            # 138 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -170,8 +170,12 @@ browser keeps a small background listener that the push wakes. Your device does
 need to be on and online, and on a Mac, Chrome has to be running rather than
 fully quit.
 
-**To check it worked**, go to Actions → *Scrape notices and publish site* → **Run
-workflow**, tick **Send a test notification**, and run it. That sends a sample
+**To check it worked**, there are two tests, because there are two things that
+can be wrong. The setup dialog's **Send a test popup** button shows a
+notification from the page itself, proving this device will display one at all
+(permission, service worker, OS settings). That says nothing about whether the
+secrets were pasted correctly — for that, go to Actions → *Scrape notices and
+publish site* → **Run workflow**, tick **Send a test notification**, and run it. That sends a sample
 alert to every channel you have configured and does no scraping. The run's log
 names each channel and, if one is misconfigured, says why — a mistyped secret
 shows up as "not valid JSON" rather than as silence. Without this there is no
@@ -344,7 +348,7 @@ server/
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
   js/push-setup.js  browser-side VAPID generation and device subscription
-test/               136 tests, parsers included (served from HTTP fixtures)
+test/               138 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

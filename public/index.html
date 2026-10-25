@@ -227,13 +227,27 @@
         </div>
 
         <div class="setup-step" id="stepDone" hidden>
-          <h3><span class="step-n">3</span> That's it</h3>
+          <h3><span class="step-n">3</span> Check it works</h3>
           <p class="hint">
-            The next scheduled check will send a popup here whenever a new notice appears. To add
-            another device, open this page on it and run through these steps again — the values
-            will already include the devices you have added.
+            This sends a popup to this device right now, so you can see that notifications are
+            allowed and working here.
           </p>
-          <button class="btn" id="pushSetupFinish">Done</button>
+          <button class="btn" id="pushTestLocal">Send a test popup</button>
+          <p class="hint" id="pushTestResult" hidden></p>
+
+          <p class="hint" style="margin-top: 14px">
+            That checks this device. To check that <strong>GitHub</strong> can reach it — which is
+            what proves your pasted secrets are right — open
+            <a id="workflowLink" href="#" target="_blank" rel="noopener">the workflow</a>,
+            press <strong>Run workflow</strong>, tick <strong>Send a test notification</strong>,
+            and run it.
+          </p>
+
+          <p class="hint">
+            After that you are done. The next scheduled check sends a popup here whenever a new
+            notice appears. To add another device, open this page on it and run these steps again.
+          </p>
+          <button class="btn primary" id="pushSetupFinish">Done</button>
         </div>
       </div>
     </dialog>

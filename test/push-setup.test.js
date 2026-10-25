@@ -98,3 +98,17 @@ test('the page offers the setup rather than silently doing nothing', async () =>
     assert.ok(html.includes(`id="${id}"`), `index.html is missing #${id}`);
   }
 });
+
+test('the page offers both a local test and a link to the real one', async () => {
+  // The local button proves this device shows popups; only a push from CI
+  // proves the pasted secrets are right, so both have to be reachable.
+  const html = await readFile(join(HERE, '..', 'public', 'index.html'), 'utf8');
+  assert.ok(html.includes('id="pushTestLocal"'), 'no on-page test button');
+  assert.ok(html.includes('id="pushTestResult"'), 'the test gives no feedback');
+  assert.ok(html.includes('id="workflowLink"'), 'no link to the end-to-end test');
+});
+
+test('the static build points the workflow link at the real repository', async () => {
+  const app = await readFile(join(HERE, '..', 'public', 'js', 'app.js'), 'utf8');
+  assert.match(app, /actions\/workflows\/scrape\.yml/, 'the workflow link is not built from the repo');
+});

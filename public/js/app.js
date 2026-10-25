@@ -785,16 +785,24 @@ function writeSetup(value) {
   }
 }
 
-function openPushSetup() {
+async function openPushSetup() {
   const dialog = $('#pushSetup');
   $('#stepCopy').hidden = true;
   $('#stepDone').hidden = true;
   $('#pushSubscribe').disabled = false;
+  $('#pushSubscribe').textContent = 'Allow and continue';
 
   const repo = staticCache?.meta?.repo;
   $('#secretsLink').href = repo
     ? `https://github.com/${repo}/settings/secrets/actions`
     : 'https://docs.github.com/actions/security-guides/encrypted-secrets';
+  const workflowLink = $('#workflowLink');
+  if (workflowLink) {
+    workflowLink.href = repo
+      ? `https://github.com/${repo}/actions/workflows/scrape.yml`
+      : staticCache?.meta?.workflowUrl || 'https://github.com';
+  }
+  $('#pushTestResult').hidden = true;
 
   $('#subscribeHint').innerHTML = iosNeedsInstall()
     ? '<strong>On iPhone and iPad</strong>, Apple only allows notifications once the site is ' +
@@ -802,6 +810,15 @@ function openPushSetup() {
     : 'Your browser will ask for permission.';
 
   dialog.showModal();
+
+  // Someone who has already finished setup is here to test it, not to repeat
+  // step 1, so put the test within reach straight away.
+  if (await currentSubscription()) {
+    $('#subscribeHint').innerHTML =
+      'This device is already allowed. Press below only if you need the values for your ' +
+      'repository again.';
+    $('#stepDone').hidden = false;
+  }
 }
 
 function secretBlock(name, value, note) {
@@ -891,6 +908,48 @@ async function runPushSetup() {
     } else {
       toast(`Could not set up popups: ${err.message}`, 'bad');
     }
+  }
+}
+
+/**
+ * Show a notification from the page itself. This proves the browser will
+ * display one on this device -- permission, the service worker, and the OS
+ * settings -- without involving the scheduled run. It deliberately does not
+ * prove the pasted secrets are right; only a real push from CI does that, and
+ * the dialog says so.
+ */
+async function sendLocalTestPopup() {
+  const btn = $('#pushTestLocal');
+  const result = $('#pushTestResult');
+  btn.disabled = true;
+  result.hidden = false;
+  result.textContent = 'Sending…';
+
+  try {
+    if (Notification.permission !== 'granted') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') throw new Error('Notifications are not allowed for this site.');
+    }
+    const registration =
+      (await navigator.serviceWorker.getRegistration()) ||
+      (await navigator.serviceWorker.register('./sw.js'));
+    await navigator.serviceWorker.ready;
+
+    await registration.showNotification('Test popup — notifications are working', {
+      body: 'This is what a new CBSE or NTA notice will look like.',
+      tag: 'exam-notice-radar-test',
+      icon: './icons/icon-192.png',
+      badge: './icons/badge.png',
+      data: { url: window.location.href },
+    });
+
+    result.innerHTML =
+      'Sent. If you did not see it, check your system notification settings — on Windows, ' +
+      'Focus assist; on a Mac, System Settings → Notifications → your browser.';
+  } catch (err) {
+    result.textContent = `Could not show a popup: ${err.message}`;
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -1034,6 +1093,7 @@ function wireEvents() {
   $('#enablePush').addEventListener('click', togglePush);
 
   $('#pushSubscribe')?.addEventListener('click', runPushSetup);
+  $('#pushTestLocal')?.addEventListener('click', sendLocalTestPopup);
   $('#pushSetupClose')?.addEventListener('click', () => $('#pushSetup').close());
   $('#pushSetupFinish')?.addEventListener('click', () => $('#pushSetup').close());
   $('#pushSetup')?.addEventListener('close', () => syncPushButton().catch(() => {}));
