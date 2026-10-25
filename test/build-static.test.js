@@ -96,7 +96,7 @@ test('the page is flipped into static mode', () => {
 test('absolute paths are rewritten, since Pages serves from a subpath', () => {
   // A leftover "/css/app.css" would 404 at https://user.github.io/jee/.
   assert.ok(!/(href|src)="\/(?!\/)/.test(html), 'an absolute path survived the rewrite');
-  assert.match(html, /href="\.\/css\/app\.css"/);
+  assert.match(html, /href="\.\/css\/app\.css\?v=\d+"/);
   assert.match(html, /src="\.\/js\/app\.js\?v=\d+"/);
 });
 
