@@ -110,6 +110,23 @@ free Pages hosting**, which is what makes this work.
 
 Your site lands at `https://<user>.github.io/<repo>/`. That is the whole setup.
 
+#### Hosting the page on Vercel instead (also free)
+
+`vercel.json` is set up for this: import the repo and Vercel builds the same
+static site and serves it at a nicer URL. Every time the scheduled run commits
+new notices, Vercel redeploys automatically.
+
+Note that Vercel serves the **built** site, not the Express app. Letting it run
+the server looks like it works and does not: a serverless function is frozen
+once it has replied, so the scheduler's timer never fires; its filesystem does
+not survive a cold start, so the feed and any push subscriptions are lost; and
+every cold start re-scrapes all four government sites from scratch. The
+scraping belongs in the scheduled Actions run either way — Vercel just serves
+the result.
+
+You can run both Pages and Vercel from the same repo; they publish the same
+build.
+
 #### Alerts, with nothing to install
 
 When a scrape finds something new it **opens an issue on this repo**, and
@@ -297,6 +314,7 @@ no push permission needed.
 scripts/
   ci-run.js         one scrape for Actions: commits state, alerts via ntfy
   build-static.js   bakes the feed into a static site for Pages
+vercel.json         builds and serves the static site on Vercel
 Dockerfile          production image; render.yaml / fly.toml are host blueprints
 server/
   index.js          Express app, REST API, SSE stream

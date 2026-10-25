@@ -1,0 +1,38 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "//": [
+    "Vercel serves the pre-built static site, not the Express app.",
+    "",
+    "Running the server here does not work the way it looks like it does: a",
+    "serverless function is frozen once it has replied, so the scheduler's",
+    "timer never fires, and its filesystem does not survive a cold start, so",
+    "the feed and any push subscriptions are lost and every cold start",
+    "re-scrapes all four government sites from scratch.",
+    "",
+    "Instead the scheduled GitHub Actions run does the scraping and commits",
+    "the feed to site-data/, which pushes here and triggers this build. The",
+    "site is then plain static files: no cold starts, no re-scraping, and the",
+    "same feed the alerts were sent from."
+  ],
+
+  "buildCommand": "DATA_DIR=./site-data node scripts/build-static.js",
+  "outputDirectory": "dist",
+  "framework": null,
+  "installCommand": "npm ci",
+
+  "headers": [
+    {
+      "source": "/notices.json",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/meta.json",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
+  ]
+}
