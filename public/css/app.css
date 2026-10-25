@@ -878,3 +878,31 @@ select:focus, input:focus { outline-color: var(--accent); }
 @media (max-width: 520px) {
   .setup { width: 100vw; max-width: 100vw; max-height: 100dvh; height: 100dvh; border-radius: 0; }
 }
+
+.setup-merge {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunk);
+}
+.setup-merge > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text-dim);
+}
+.setup-merge > summary:hover { color: var(--text); }
+.setup-merge textarea {
+  width: 100%;
+  margin: 8px 0;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  resize: vertical;
+}
+.setup-merge textarea:focus { outline-color: var(--accent); }

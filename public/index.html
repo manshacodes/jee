@@ -224,6 +224,24 @@
             and add each one with <strong>New repository secret</strong>. Name and value must match exactly.
           </p>
           <div id="secretList"></div>
+
+          <details class="setup-merge" id="mergeExisting">
+            <summary>Someone else's device is already registered</summary>
+            <p class="hint">
+              Adding a second person or a device on another computer? Paste the
+              <strong>current</strong> value of <code>PUSH_SUBSCRIPTIONS</code> below and press
+              Merge — this device gets added to it instead of replacing it. Leave this alone if
+              this is the first device.
+            </p>
+            <textarea
+              id="mergeInput"
+              rows="3"
+              placeholder='[{"endpoint":"https://...","keys":{...}}]'
+              aria-label="Current PUSH_SUBSCRIPTIONS value"
+            ></textarea>
+            <button class="btn" id="mergeApply">Merge this device in</button>
+            <p class="hint" id="mergeResult" hidden></p>
+          </details>
         </div>
 
         <div class="setup-step" id="stepDone" hidden>

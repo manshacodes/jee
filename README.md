@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 138 unit/integration tests
+npm test            # 141 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -180,6 +180,23 @@ alert to every channel you have configured and does no scraping. The run's log
 names each channel and, if one is misconfigured, says why — a mistyped secret
 shows up as "not valid JSON" rather than as silence. Without this there is no
 feedback between finishing setup and the next real notice, which may be days.
+
+#### More than one person, or a device on another computer
+
+The setup remembers devices registered in *that browser*, so a second computer
+or a second person would otherwise produce a value that silently replaces
+everyone already registered. Open **Someone else's device is already
+registered** in the dialog, paste the current value of `PUSH_SUBSCRIPTIONS`,
+and press Merge; the output then covers all of them.
+
+**Forking does not give someone their own alerts.** Forks copy code, never
+secrets, and a device registered on *your* site is locked to *your* signing
+key — only your repository can push to it. On top of that, GitHub disables
+scheduled workflows in forks by default, so a fork is not checking anything
+until its owner enables Actions. Someone who wants their own copy has to
+enable Actions and Pages on their fork and run the setup on *their* site,
+which generates a fresh key pair. Otherwise, add their device to your
+`PUSH_SUBSCRIPTIONS` and share the one deployment.
 
 <details>
 <summary>Optional: push alerts through ntfy instead</summary>
@@ -348,7 +365,7 @@ server/
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
   js/push-setup.js  browser-side VAPID generation and device subscription
-test/               138 tests, parsers included (served from HTTP fixtures)
+test/               141 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

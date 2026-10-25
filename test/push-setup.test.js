@@ -112,3 +112,29 @@ test('the static build points the workflow link at the real repository', async (
   const app = await readFile(join(HERE, '..', 'public', 'js', 'app.js'), 'utf8');
   assert.match(app, /actions\/workflows\/scrape\.yml/, 'the workflow link is not built from the repo');
 });
+
+test('merging two people keeps every device', () => {
+  // The case this exists for: a second person sets up on someone else's site,
+  // and their value must not replace the devices already registered.
+  const owner = JSON.stringify([device('owner-laptop'), device('owner-phone')]);
+  const merged = mergeSubscriptions(owner, device('friend-phone'));
+  assert.equal(merged.length, 3);
+  assert.deepEqual(merged.map((s) => s.endpoint.split('/').pop()).sort(), [
+    'friend-phone',
+    'owner-laptop',
+    'owner-phone',
+  ]);
+});
+
+test('merging the same device twice is a no-op', () => {
+  const owner = JSON.stringify([device('owner-laptop'), device('friend-phone')]);
+  const merged = mergeSubscriptions(owner, device('friend-phone'));
+  assert.equal(merged.length, 2);
+});
+
+test('the merge box exists, since localStorage cannot see other computers', async () => {
+  const html = await readFile(join(HERE, '..', 'public', 'index.html'), 'utf8');
+  assert.ok(html.includes('id="mergeInput"'), 'no way to paste an existing device list');
+  assert.ok(html.includes('id="mergeApply"'), 'no way to apply a merge');
+  assert.ok(html.includes('id="mergeResult"'), 'a merge gives no feedback');
+});

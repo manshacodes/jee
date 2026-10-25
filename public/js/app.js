@@ -769,6 +769,9 @@ async function togglePush() {
 /** Remembered so a second device can be merged rather than overwrite the first. */
 const SETUP_KEY = 'pushSetup';
 
+/** This device's subscription, kept so the merge box can recombine it. */
+let lastDeviceSubscription = null;
+
 function readSetup() {
   try {
     return JSON.parse(localStorage.getItem(SETUP_KEY) || '{}');
@@ -893,7 +896,11 @@ async function runPushSetup() {
       );
     }
 
+    lastDeviceSubscription = subscription;
     $('#secretList').innerHTML = blocks.join('\n');
+    $('#mergeExisting').open = false;
+    $('#mergeResult').hidden = true;
+    $('#mergeInput').value = '';
     $('#stepCopy').hidden = false;
     $('#stepDone').hidden = false;
     btn.textContent = 'Allowed ✓';
@@ -950,6 +957,63 @@ async function sendLocalTestPopup() {
     result.textContent = `Could not show a popup: ${err.message}`;
   } finally {
     btn.disabled = false;
+  }
+}
+
+/**
+ * Merge this device into a PUSH_SUBSCRIPTIONS value pasted from elsewhere.
+ *
+ * localStorage only knows about devices set up in this browser, so a second
+ * person, or the same person on another computer, would otherwise produce a
+ * value that silently replaces everyone already registered. Pasting the
+ * current value here makes the output additive.
+ */
+function applyMerge() {
+  const input = $('#mergeInput');
+  const result = $('#mergeResult');
+  result.hidden = false;
+
+  if (!lastDeviceSubscription) {
+    result.textContent = 'Finish step 1 first, so there is a device to merge in.';
+    return;
+  }
+
+  const raw = input.value.trim();
+  if (!raw) {
+    result.textContent = 'Paste the current value of the secret first.';
+    return;
+  }
+
+  let existing;
+  try {
+    const parsed = JSON.parse(raw);
+    existing = Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    result.textContent =
+      'That is not valid JSON. Copy the whole value, starting with [ and ending with ].';
+    return;
+  }
+
+  const usable = existing.filter((item) => item?.endpoint && item?.keys);
+  if (usable.length !== existing.length) {
+    result.textContent =
+      'Some entries had no endpoint or keys, so they were left out. Check what you pasted.';
+  }
+
+  const merged = mergeSubscriptions(JSON.stringify(usable), lastDeviceSubscription);
+  const added = merged.length > usable.length;
+
+  // Keep localStorage in step, so re-running setup here does not undo the merge.
+  const saved = readSetup();
+  writeSetup({ ...saved, subscriptions: JSON.stringify(merged) });
+
+  const block = document.getElementById('secret-PUSH_SUBSCRIPTIONS');
+  if (block) block.textContent = JSON.stringify(merged);
+
+  if (!result.textContent || added) {
+    result.textContent = added
+      ? `Merged — the value above now covers ${merged.length} devices. Copy it and replace the secret.`
+      : `This device was already in that list; it still covers ${merged.length} devices.`;
   }
 }
 
@@ -1094,6 +1158,7 @@ function wireEvents() {
 
   $('#pushSubscribe')?.addEventListener('click', runPushSetup);
   $('#pushTestLocal')?.addEventListener('click', sendLocalTestPopup);
+  $('#mergeApply')?.addEventListener('click', applyMerge);
   $('#pushSetupClose')?.addEventListener('click', () => $('#pushSetup').close());
   $('#pushSetupFinish')?.addEventListener('click', () => $('#pushSetup').close());
   $('#pushSetup')?.addEventListener('close', () => syncPushButton().catch(() => {}));
