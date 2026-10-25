@@ -16,12 +16,19 @@ import {
 import { getLastRun, isRunning, runIngest } from './ingest.js';
 import { getPublicKey, initPush, subscribe, unsubscribe } from './push.js';
 import { clampInterval, getNextRunAt, reschedule, setRunListener } from './scheduler.js';
+import { requireAuth, warnIfOpen } from './auth.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 
 const app = express();
+
+// Behind Render/Fly/Railway's proxy, so req.ip and protocol reflect the client.
+app.set('trust proxy', true);
+
 app.use(express.json({ limit: '64kb' }));
+// The gate goes before the static handler so the UI itself is protected too.
+app.use(requireAuth);
 app.use(express.static(join(HERE, '..', 'public'), { extensions: ['html'] }));
 
 // --- server-sent events: push fresh notices into open tabs -----------------
@@ -236,8 +243,9 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, uptime: process.uptim
 // --- boot ------------------------------------------------------------------
 
 async function main() {
+  warnIfOpen();
   await initPush();
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[server] Exam Notice Radar listening on http://localhost:${PORT}`);
   });
 

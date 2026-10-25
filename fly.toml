@@ -1,0 +1,51 @@
+# Fly.io config: https://fly.io/docs/reference/configuration/
+#
+# Deploy with:
+#   fly launch --no-deploy --copy-config
+#   fly secrets set APP_PASSWORD='pick-something-long'
+#   fly secrets set VAPID_PUBLIC_KEY='...' VAPID_PRIVATE_KEY='...' VAPID_SUBJECT='mailto:you@example.com'
+#   fly volumes create data --size 1
+#   fly deploy
+#
+# Fly is the better free-tier choice here: min_machines_running = 1 keeps the
+# scheduler awake, which Render's free plan does not.
+
+app = "exam-notice-radar"
+primary_region = "bom" # Mumbai -- closest to the CBSE/NTA origins
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  APP_USER = "admin"
+  DATA_DIR = "/data"
+
+# Keeps notices, settings, push subscriptions and the VAPID keys across deploys.
+[mounts]
+  source = "data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # A notification app that is asleep sends no notifications, so do not let
+  # Fly stop the machine when traffic is idle.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.http_options.response]
+    pristine = true # do not let the proxy buffer the server-sent-events stream
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/api/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

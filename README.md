@@ -23,7 +23,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 71 unit/integration tests
+npm test            # 78 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -93,6 +93,68 @@ the nearest dated notice around them — the listings are chronological, so list
 position is a good proxy. Those are marked `dateInferred` and the UI labels
 them "Around 5 Oct 2026" rather than claiming a date the board never published.
 
+## Deploying it
+
+It needs a real server: the scrapers run server-side (a browser cannot fetch
+these sites cross-origin), and the scheduler and push sender need a process
+that stays up. A `Dockerfile` is included, plus blueprints for two hosts.
+
+**Set a password.** `APP_PASSWORD` turns on an HTTP Basic gate over the whole
+app. Without it, anyone with the URL can read your feed and change your fetch
+interval. It is optional on localhost and effectively required anywhere else —
+the server warns on boot if it detects a hosting platform and no password.
+
+**Generate VAPID keys and set them as environment variables:**
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Without them the app generates its own into `DATA_DIR` on first boot, which is
+fine locally — but on a host without a persistent disk they are regenerated on
+every deploy, silently breaking every phone and laptop subscription.
+
+### A warning about free tiers
+
+**Render's free plan sleeps a web service after ~15 minutes without traffic.**
+A sleeping service runs no scheduled fetches and sends no notifications; it
+only wakes when someone loads the page. For a notification app that removes
+the point of it. Either use Render's paid plan, or deploy to Fly.io, where
+`min_machines_running = 1` in the included `fly.toml` keeps it awake on the
+free allowance.
+
+### Fly.io
+
+```bash
+fly launch --no-deploy --copy-config
+fly secrets set APP_PASSWORD='pick-something-long'
+fly secrets set VAPID_PUBLIC_KEY='...' VAPID_PRIVATE_KEY='...' VAPID_SUBJECT='mailto:you@example.com'
+fly volumes create data --size 1
+fly deploy
+```
+
+### Render
+
+New → Blueprint → point it at this repo; [`render.yaml`](render.yaml) does the
+rest. Render generates `APP_PASSWORD` for you — read it from the dashboard
+under Environment. Paste the VAPID keys there too.
+
+### Any Docker host
+
+```bash
+docker build -t exam-notice-radar .
+docker run -d -p 3000:3000 \
+  -v exam-notice-data:/app/data \
+  -e APP_PASSWORD='pick-something-long' \
+  -e VAPID_PUBLIC_KEY='...' -e VAPID_PRIVATE_KEY='...' \
+  -e VAPID_SUBJECT='mailto:you@example.com' \
+  exam-notice-radar
+```
+
+Serve it over **HTTPS**. Browsers refuse Web Push on plain HTTP (localhost is
+the only exception), so phone alerts will not work without a certificate — all
+three options above give you one automatically.
+
 ## Settings
 
 All of it lives in the settings drawer and persists to `data/settings.json`:
@@ -142,8 +204,10 @@ no push permission needed.
 ## Layout
 
 ```
+Dockerfile          production image; render.yaml / fly.toml are host blueprints
 server/
   index.js          Express app, REST API, SSE stream
+  auth.js           optional HTTP Basic gate for public deployments
   ingest.js         scrape -> categorise -> store -> push, one source failing is survivable
   scheduler.js      re-arming timer driven by the user's interval setting
   store.js          JSON store: atomic writes, serialised, stable notice ids
@@ -153,7 +217,7 @@ server/
   push.js           Web Push: VAPID, category filters, prunes dead devices
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
-test/               71 tests, parsers included (served from HTTP fixtures)
+test/               78 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

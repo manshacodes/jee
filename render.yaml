@@ -1,0 +1,56 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+#
+# Deploy with: New -> Blueprint -> point it at this repository.
+#
+# IMPORTANT, read before you rely on alerts:
+#
+#   Render's FREE plan spins a web service down after ~15 minutes without
+#   traffic. A sleeping service runs no scheduled fetches and sends no push
+#   notifications -- it only wakes when someone opens the page. That defeats
+#   the point of this app. Use the "starter" plan below (or Fly.io with a
+#   machine kept running) if you want alerts to actually arrive.
+#
+services:
+  - type: web
+    name: exam-notice-radar
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter # "free" works, but see the warning above about sleeping
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+    # Keeps notices, settings and push subscriptions across deploys.
+    # Disks need a paid plan; without one the feed re-seeds on each restart
+    # (harmless -- it is stored as read history, so no notification storm).
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Password gate. Render generates the value; read it from the dashboard
+      # under Environment, and log in with the username below.
+      - key: APP_USER
+        value: admin
+      - key: APP_PASSWORD
+        generateValue: true
+
+      # Web Push identity. Generate a pair locally with
+      #   npx web-push generate-vapid-keys
+      # and paste them here in the dashboard. Set them explicitly rather than
+      # letting the app generate its own, so existing phone/laptop
+      # subscriptions survive a redeploy.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+
+      # Uncomment only if nta.ac.in fails with
+      # "unable to get local issuer certificate".
+      # - key: INSECURE_TLS_HOSTS
+      #   value: nta.ac.in
