@@ -46,12 +46,11 @@ its own parser for its single hand-maintained list.
 
 ### On the NTA archive
 
-`nta.ac.in` was **not reachable from the machine this was built on**, so its
-parser is written against the same markup the other NTA pages serve (verified
-against `neet.nta.nic.in/document-category/...`, which returns the identical
-`table.doc-table` layout) but was never exercised against the live page. If it
-comes back empty for you, the UI will say so in the source-health panel rather
-than failing quietly.
+`nta.ac.in` refuses connections from some networks, and was unreachable from
+the machine this was built on. It **does** work from GitHub Actions, where the
+scheduled run reads it normally — so if it comes back empty locally, that is
+your network rather than the parser. The source-health panel in settings says
+which sources failed and why, rather than failing quietly.
 
 That host has also historically served an **incomplete TLS chain**. If a fetch
 fails with `unable to get local issuer certificate`, set:
@@ -61,7 +60,8 @@ INSECURE_TLS_HOSTS=nta.ac.in npm start
 ```
 
 which disables chain verification for that host only. Everything else keeps
-full verification.
+full verification. In the workflow, set it as the repository variable
+`INSECURE_TLS_HOSTS` instead.
 
 ## Categorisation
 
