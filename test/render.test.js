@@ -29,10 +29,11 @@ async function loadRenderer() {
     slice('function escapeHtml('),
     slice('function safeUrl('),
     slice('function primaryCategory('),
+    slice('function highlight('),
     slice('function formatDate('),
     slice('function relativeTime('),
     'const categoryLabel = (id) => id;',
-    'return { noticeCard, escapeHtml, safeUrl, primaryCategory };',
+    'return { noticeCard, escapeHtml, safeUrl, primaryCategory, highlight };',
   ].join('\n\n');
 
   // `safeUrl` resolves relative URLs against the page origin.
@@ -153,12 +154,15 @@ test('a card offers a star, reflecting its saved state', async () => {
   const { noticeCard } = await loadRenderer();
   const off = noticeCard(notice({ starred: false }));
   assert.match(off, /data-star="abc123"/);
+  assert.ok(!/class="[^"]*\bon\b[^"]*"/.test(off), 'an unsaved notice looks saved');
   assert.match(off, /aria-pressed="false"/);
   assert.match(off, /aria-label="Save this notice"/);
 
   const on = noticeCard(notice({ starred: true }));
   assert.match(on, /aria-pressed="true"/);
-  assert.match(on, /class="star on"/);
+  // Match the state class without pinning the whole class attribute, which
+  // also carries presentation classes.
+  assert.match(on, /class="[^"]*\bstar\b[^"]*\bon\b[^"]*"/);
   assert.match(on, /aria-label="Remove from saved"/);
 });
 
@@ -198,4 +202,43 @@ test('the "since your last visit" label stays readable at any age', async () => 
   assert.match(shortWhen(ago(3 * day)), /^[A-Z][a-z]+day$/);
   assert.match(shortWhen(ago(30 * day)), /\d/);
   assert.equal(shortWhen('nonsense'), 'your last visit');
+});
+
+test('search matches are marked in the title', async () => {
+  const { highlight } = await loadRenderer();
+  assert.equal(highlight('Answer Key for JEE', 'answer key'), '<mark>Answer Key</mark> for JEE');
+  assert.equal(highlight('key key', 'key'), '<mark>key</mark> <mark>key</mark>');
+  // Original casing is preserved, matching is not case sensitive.
+  assert.match(highlight('Final ANSWER keys', 'answer'), /<mark>ANSWER<\/mark>/);
+});
+
+test('highlighting never lets markup through', async () => {
+  const { highlight } = await loadRenderer();
+  // Escaping shifts offsets, so matching must happen on the raw string and
+  // each piece be escaped separately -- otherwise a match can land inside an
+  // entity and break the escaping.
+  assert.equal(highlight('Paper 2A & 2B answer', 'answer'), 'Paper 2A &amp; 2B <mark>answer</mark>');
+  const hostile = highlight('<img src=x onerror=alert(1)> answer', 'answer');
+  assert.ok(!hostile.includes('<img'), 'markup in the title survived');
+  assert.match(hostile, /&lt;img/);
+  // A query containing markup must not become markup either.
+  const injected = highlight('a <script> b', '<script>');
+  assert.ok(!injected.includes('<script>'), 'markup in the query survived');
+  assert.match(injected, /<mark>&lt;script&gt;<\/mark>/);
+});
+
+test('no search term means no marks at all', async () => {
+  const { highlight } = await loadRenderer();
+  assert.equal(highlight('Answer Key', ''), 'Answer Key');
+  assert.equal(highlight('Answer Key', '   '), 'Answer Key');
+  assert.equal(highlight('Answer Key', null), 'Answer Key');
+  assert.equal(highlight('Answer Key', undefined), 'Answer Key');
+});
+
+test('a card offers both share and star', async () => {
+  const { noticeCard } = await loadRenderer();
+  const html = noticeCard(notice());
+  assert.match(html, /data-share="abc123"/);
+  assert.match(html, /data-star="abc123"/);
+  assert.match(html, /aria-label="Share this notice"/);
 });

@@ -92,8 +92,20 @@
           <ul class="nav-list compact" id="sourceNav"></ul>
         </nav>
 
+        <div class="nav-group" id="installGroup" hidden>
+          <h2 class="nav-title"><span>03</span> Install</h2>
+          <button class="btn ghost full" id="installApp">
+            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+              <path d="M12 7v7M9 11l3 3 3-3" />
+            </svg>
+            <span id="installLabel">Add to home screen</span>
+          </button>
+          <p class="hint" id="installHint"></p>
+        </div>
+
         <div class="nav-group">
-          <h2 class="nav-title"><span>03</span> Alerts</h2>
+          <h2 class="nav-title"><span id="alertsNumber">03</span> Alerts</h2>
           <button class="btn ghost full" id="enablePush">
             <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10.3 21a2 2 0 0 0 3.4 0" />

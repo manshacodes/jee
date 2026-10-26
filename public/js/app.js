@@ -258,7 +258,7 @@ function noticeCard(n, justIn = false) {
     <li class="notice ${n.isNew ? 'is-new' : ''} ${justIn ? 'just-in' : ''}" data-id="${escapeHtml(n.id)}" data-cat="${escapeHtml(primaryCategory(n))}">
       <div class="notice-body">
         <h3 class="notice-title">
-          <a href="${escapeHtml(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a>
+          <a href="${escapeHtml(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer">${highlight(n.title, n.match)}</a>
         </h3>
         <div class="notice-meta">
           ${chips}
@@ -269,17 +269,29 @@ function noticeCard(n, justIn = false) {
       <div class="notice-side">
         <span class="count">${n.dateInferred ? '~' : ''}${relativeTime(n.publishedAt || n.firstSeenAt)}</span>
       </div>
-      <button
-        class="star ${n.starred ? 'on' : ''}"
-        data-star="${escapeHtml(n.id)}"
-        aria-pressed="${n.starred ? 'true' : 'false'}"
-        aria-label="${n.starred ? 'Remove from saved' : 'Save this notice'}"
-        title="${n.starred ? 'Saved' : 'Save'}"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.7l5.8-.8z" />
-        </svg>
-      </button>
+      <div class="notice-actions">
+        <button
+          class="icon-action"
+          data-share="${escapeHtml(n.id)}"
+          aria-label="Share this notice"
+          title="Share"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 15V3M8 7l4-4 4 4" />
+          </svg>
+        </button>
+        <button
+          class="icon-action star ${n.starred ? 'on' : ''}"
+          data-star="${escapeHtml(n.id)}"
+          aria-pressed="${n.starred ? 'true' : 'false'}"
+          aria-label="${n.starred ? 'Remove from saved' : 'Save this notice'}"
+          title="${n.starred ? 'Saved' : 'Save'}"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.7l5.8-.8z" />
+          </svg>
+        </button>
+      </div>
     </li>`;
 }
 
@@ -339,6 +351,37 @@ function shortWhen(iso) {
  */
 function updateTabTitle(unread) {
   document.title = unread > 0 ? `(${unread}) Exam Notice Radar` : 'Exam Notice Radar';
+}
+
+/**
+ * Wrap occurrences of the search term in <mark>.
+ *
+ * The split happens on the raw title and each piece is escaped separately, so
+ * the only unescaped markup is the <mark> tags this function writes. Escaping
+ * first and then searching would be wrong: escaping shifts character
+ * positions ("&" becomes "&amp;"), so matched offsets would drift and could
+ * land inside an entity.
+ */
+function highlight(title, query) {
+  const text = String(title ?? '');
+  const needle = String(query ?? '').trim();
+  if (!needle) return escapeHtml(text);
+
+  const haystack = text.toLowerCase();
+  const lowerNeedle = needle.toLowerCase();
+  let out = '';
+  let from = 0;
+
+  for (;;) {
+    const at = haystack.indexOf(lowerNeedle, from);
+    if (at === -1) {
+      out += escapeHtml(text.slice(from));
+      return out;
+    }
+    out += escapeHtml(text.slice(from, at));
+    out += `<mark>${escapeHtml(text.slice(at, at + needle.length))}</mark>`;
+    from = at + needle.length;
+  }
 }
 
 function escapeHtml(s) {
@@ -600,7 +643,7 @@ async function loadNotices({ append = false, force = false } = {}) {
 
   let list = data.notifications;
   if (state.category === 'saved') list = list.filter((n) => starred.has(n.id));
-  state.notices = list.map((n) => ({ ...n, starred: starred.has(n.id) }));
+  state.notices = list.map((n) => ({ ...n, starred: starred.has(n.id), match: state.query }));
   state.total = state.category === 'saved' ? list.length : data.total;
   state.counts = { ...data.counts, saved: starred.size };
 
@@ -627,7 +670,9 @@ async function loadNoticesStatic({ append = false, force = false } = {}) {
   });
 
   state.limit = append ? state.limit + PAGE : PAGE;
-  state.notices = filtered.slice(0, state.limit).map((n) => ({ ...n, starred: starred.has(n.id) }));
+  state.notices = filtered
+    .slice(0, state.limit)
+    .map((n) => ({ ...n, starred: starred.has(n.id), match: state.query }));
   state.total = filtered.length;
 
   const counts = { all: all.length, new: all.filter((n) => n.isNew).length };
@@ -751,6 +796,66 @@ async function saveSettings(patch) {
     toast(`Could not save: ${err.message}`, 'bad');
     renderSettings();
     return null;
+  }
+}
+
+/**
+ * Hand the notice to the device's share sheet, falling back to the clipboard.
+ *
+ * navigator.share only exists on mobile and only in a secure context, and it
+ * rejects with AbortError when the user dismisses the sheet -- which is not an
+ * error worth reporting.
+ */
+async function shareNotice(id) {
+  const notice = state.notices.find((n) => n.id === id);
+  if (!notice) return;
+
+  const payload = { title: notice.title, text: notice.title, url: notice.url };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(payload);
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      // Anything else: fall through to copying.
+    }
+  }
+
+  const text = `${notice.title}\n${notice.url}`;
+  if (await copyText(text)) {
+    toast('Link copied.', 'good');
+  } else {
+    // Opening the document would be a surprising answer to "share", so say
+    // what happened instead and leave the link selectable in the card.
+    toast('Could not copy automatically — long-press the title to copy the link.', 'bad');
+  }
+}
+
+/**
+ * Copy via the async clipboard API, falling back to a hidden textarea.
+ * The modern API needs a permission that is routinely refused; execCommand is
+ * deprecated but still the only thing that works in those cases.
+ */
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    /* fall through */
+  }
+  try {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.append(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    area.remove();
+    return ok;
+  } catch {
+    return false;
   }
 }
 
@@ -913,6 +1018,74 @@ async function togglePush() {
     toast(`Could not enable alerts: ${err.message}`, 'bad');
   }
   return syncPushButton();
+}
+
+// ---------------------------------------------------------------- install
+
+/** Chrome/Edge/Android fire this; it is the handle to the native prompt. */
+let installPrompt = null;
+
+function isInstalled() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
+
+/**
+ * Offer installing the app.
+ *
+ * Two quite different cases. On Chrome and Android the browser gives us a
+ * prompt to trigger. On iOS there is no such event and no API: Safari only
+ * installs through its own Share menu, so all we can do is say so -- and it
+ * matters here, because Apple will not deliver push to a site that has not
+ * been added to the home screen.
+ */
+function setupInstall() {
+  const group = $('#installGroup');
+  if (!group) return;
+
+  if (isInstalled()) {
+    group.hidden = true;
+    return;
+  }
+
+  if (iosNeedsInstall()) {
+    group.hidden = false;
+    $('#installLabel').textContent = 'How to add to home screen';
+    $('#installHint').innerHTML =
+      'Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>. ' +
+      'On iPhone this is also required before popup alerts can work.';
+    $('#installApp').addEventListener('click', () => {
+      $('#installHint').classList.add('emphasis');
+      toast('Use your browser’s Share button, then “Add to Home Screen”.');
+    });
+    return;
+  }
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    // Keep the browser's own banner suppressed and offer it where it fits.
+    event.preventDefault();
+    installPrompt = event;
+    group.hidden = false;
+    $('#installLabel').textContent = 'Install app';
+    $('#installHint').textContent =
+      'Opens in its own window and keeps working offline once loaded.';
+  });
+
+  $('#installApp').addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    installPrompt = null;
+    group.hidden = true;
+    if (outcome === 'accepted') toast('Installed.', 'good');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    group.hidden = true;
+    installPrompt = null;
+  });
 }
 
 // ---------------------------------------------------------------- push setup
@@ -1230,19 +1403,19 @@ function applyMerge() {
 }
 
 async function copySecret(id) {
-  const text = document.getElementById(id)?.textContent || '';
-  try {
-    await navigator.clipboard.writeText(text);
+  const node = document.getElementById(id);
+  const text = node?.textContent || '';
+  if (await copyText(text)) {
     toast('Copied.', 'good');
-  } catch {
-    // Clipboard access needs a secure context and permission; select instead.
-    const range = document.createRange();
-    range.selectNodeContents(document.getElementById(id));
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    toast('Press Ctrl/Cmd+C to copy the selected text.');
+    return;
   }
+  // Last resort: select it so the user can copy by hand.
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  toast('Press Ctrl/Cmd+C to copy the selected text.');
 }
 
 // ---------------------------------------------------------------- SSE
@@ -1357,12 +1530,20 @@ function wireEvents() {
   });
 
   $('#noticeList').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-star]');
-    if (!btn) return;
-    // The card is one big link; starring must not follow it.
-    e.preventDefault();
-    e.stopPropagation();
-    toggleStar(btn.dataset.star, btn);
+    // The card is one big link, so any control inside it must stop the click.
+    const star = e.target.closest('[data-star]');
+    if (star) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleStar(star.dataset.star, star);
+      return;
+    }
+    const share = e.target.closest('[data-share]');
+    if (share) {
+      e.preventDefault();
+      e.stopPropagation();
+      shareNotice(share.dataset.share);
+    }
   });
 
   $('#markAllRead').addEventListener('click', markAllRead);
@@ -1473,6 +1654,7 @@ function closeSidebar() {
 async function main() {
   captureVisit();
   wireEvents();
+  setupInstall();
   showSkeletons();
 
   try {

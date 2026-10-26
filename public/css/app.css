@@ -777,8 +777,8 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
   align-items: flex-end;
   gap: 8px;
   flex: none;
-  /* Clear the star, which is absolutely positioned in the same corner. */
-  padding-right: 26px;
+  /* Clear the action buttons, absolutely positioned in the same corner. */
+  padding-right: 56px;
 }
 .notice-side .count {
   font-family: var(--font-mono);
@@ -1201,8 +1201,8 @@ select:disabled, input:disabled, textarea:disabled { opacity: 0.55; cursor: not-
 
 @media (max-width: 540px) {
   /* The timestamp column is hidden here, so the title would otherwise run
-     under the star. */
-  .notice-body { padding-right: 24px; }
+     under the action buttons. */
+  .notice-body { padding-right: 52px; }
 
   .topbar { gap: 8px; padding: 0 12px; }
   .btn.primary span:not(.btn-icon) { display: none; }
@@ -1351,12 +1351,17 @@ body::after {
   :root[data-theme='system'] body::after { opacity: 0.05; }
 }
 
-/* ========================================================== star */
-.star {
+/* ========================================================== card actions */
+.notice-actions {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 9px;
+  right: 9px;
   z-index: 2; /* above the card-wide link overlay */
+  display: flex;
+  gap: 2px;
+}
+
+.icon-action {
   display: grid;
   place-items: center;
   width: 26px;
@@ -1366,22 +1371,38 @@ body::after {
   border-radius: var(--r-md);
   background: transparent;
   color: var(--text-faint);
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s var(--ease), color 0.15s var(--ease), transform 0.12s var(--ease);
+  transition: opacity 0.15s var(--ease), color 0.15s var(--ease),
+    background-color 0.15s var(--ease), transform 0.12s var(--ease);
 }
-.notice:hover .star,
-.star:focus-visible,
-.star.on { opacity: 1; }
-.star:hover { color: var(--text); background: var(--bg-sunk); }
-.star:active { transform: scale(0.88); }
+.notice:hover .icon-action,
+.icon-action:focus-visible,
+.icon-action.on { opacity: 1; }
+.icon-action:hover { color: var(--text); background: var(--bg-sunk); }
+.icon-action:active { transform: scale(0.88); }
+
 .star.on { color: #d8a33a; }
 .star.on svg { fill: #d8a33a; }
 
-/* Touch devices have no hover, so the star is always visible there. */
+/* Touch devices have no hover, so the actions are always visible there. */
 @media (hover: none) {
-  .star { opacity: 1; }
+  .icon-action { opacity: 1; }
+}
+
+/* ========================================================== search matches */
+mark {
+  padding: 0 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--new) 26%, transparent);
+  color: inherit;
+  font-weight: 700;
+}
+
+.hint.emphasis {
+  color: var(--text);
+  font-weight: 500;
 }
 
 /* ========================================================== since marker */
