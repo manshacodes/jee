@@ -226,9 +226,18 @@ treat it as a password rather than a name. Both channels can run at once.
 
 The schedule is the `cron` in
 [`.github/workflows/scrape.yml`](.github/workflows/scrape.yml) — `*/30 * * * *`
-by default. GitHub queues scheduled jobs and runs them late under load, so
-treat it as "about every half hour". Below ~15 minutes you are mostly
-generating skipped runs.
+by default.
+
+**Do not read that as every 30 minutes.** GitHub deprioritises scheduled
+workflows on free public repositories and silently drops most firings. Measured
+over 25 hours on this repo: 6 scheduled runs delivered against 51 requested, so
+about 12% honoured, with gaps between 2.4 and 7.4 hours and an average of 4.2.
+Every run succeeded — they simply never started. Lowering the cron does not
+help, and raising it mostly generates firings that are dropped.
+
+If you need the schedule actually kept, that is the thing a paid always-on host
+buys you: the timer in `server/scheduler.js` fires exactly as configured. The
+free setup trades latency for costing nothing.
 
 **What the static build gives up.** With no server there is nothing to scrape
 on demand or re-schedule from the page, so those controls are visible but

@@ -741,8 +741,9 @@ function renderSettingsStatic() {
   $('#customInterval').disabled = true;
   $('#customIntervalApply').disabled = true;
   $('#intervalHint').innerHTML =
-    'Scraping runs on a schedule in GitHub Actions, not in this page. ' +
-    'Change the cron in <code>.github/workflows/scrape.yml</code>' +
+    'Lurking runs on a schedule in GitHub Actions, not in this page. GitHub drops ' +
+    'most scheduled firings on free repos, so the real gap has been a few hours ' +
+    'whatever the cron says. Change it in <code>.github/workflows/scrape.yml</code>' +
     (workflow ? ` · <a href="${escapeHtml(workflow)}" target="_blank" rel="noopener">view runs</a>` : '') +
     '.';
 
@@ -865,7 +866,10 @@ async function refreshStatusStatic() {
   $('#fetchNow').title = 'Re-check the published feed. The actual lurking runs on a schedule in GitHub Actions.';
 
   $('#lastRunText').textContent = `Last lurked ${relativeTime(generatedAt)}`;
-  $('#nextRunText').textContent = 'Lurking on a schedule · GitHub Actions';
+  // GitHub runs scheduled workflows when it feels like it -- measured at
+  // roughly a quarter of the firings asked for -- so promising "every 30 min"
+  // here would just be wrong.
+  $('#nextRunText').textContent = 'On GitHub\u2019s schedule · often runs late';
 
   $('#errorBanner').hidden = true;
   const health = $('#sourceHealth');
@@ -892,10 +896,12 @@ async function fetchNow() {
       await loadStaticFeed({ force: true });
       await loadNotices();
       await refreshStatus();
+      // Saying only "already on the latest" invites the question "but it says
+      // the last one was two hours ago?", so answer it in the same sentence.
       toast(
         staticCache.generatedAt === before
-          ? 'Already on the latest lurk, bro.'
-          : 'Caught up.',
+          ? `No new lurk yet — last one ${relativeTime(staticCache.generatedAt)}.`
+          : 'Fresh lurk pulled in.',
         'good'
       );
     } catch (err) {
