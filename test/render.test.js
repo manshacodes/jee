@@ -259,3 +259,29 @@ test('each card has a glow layer for the cursor spotlight', async () => {
   assert.equal(firstTag, '<span', 'the glow is not the first child of the card');
   assert.ok(html.indexOf('class="glow"') < html.indexOf('notice-body'));
 });
+
+test('category plates use a glyph where one exists, a numeral otherwise', async () => {
+  const { CATEGORIES } = await import('../server/categorize.js');
+  const byId = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
+
+  // No glyph can distinguish Class 10 from Class 12, so those stay numerals --
+  // and Arabic ones, since "X" and "XII" are illegible at plate size.
+  assert.equal(byId.class10.glyph, undefined);
+  assert.equal(byId.class12.glyph, undefined);
+  assert.equal(byId.class10.icon, '10');
+  assert.equal(byId.class12.icon, '12');
+
+  for (const id of ['jee', 'neet', 'other']) {
+    assert.ok(byId[id].glyph, `${id} has no glyph`);
+    // Path data only: these are inlined into SVG without escaping, so they
+    // must stay simple path commands from our own table.
+    assert.match(byId[id].glyph, /^[MmLlHhVvCcSsQqTtAaZz0-9 .,-]+$/, `${id} glyph is not plain path data`);
+  }
+});
+
+test('every category still has a text label as a fallback', async () => {
+  const { CATEGORIES } = await import('../server/categorize.js');
+  for (const c of CATEGORIES) {
+    assert.ok(c.icon && c.icon.length <= 4, `${c.id} has no short fallback label`);
+  }
+});

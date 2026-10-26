@@ -215,9 +215,21 @@ function renderSidebar() {
   const counts = state.counts;
 
   const items = [
-    { id: 'all', label: 'All notifications', icon: 'ALL', blurb: 'Every source' },
+    {
+      id: 'all',
+      label: 'All notifications',
+      icon: 'ALL',
+      glyph: 'M4 5h16M4 12h16M4 19h10',
+      blurb: 'Every source',
+    },
     ...state.meta.categories,
-    { id: 'saved', label: 'Stash', icon: '★', blurb: 'Notices you starred on this device' },
+    {
+      id: 'saved',
+      label: 'Stash',
+      icon: '★',
+      glyph: 'm12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.7l5.8-.8z',
+      blurb: 'Notices you starred on this device',
+    },
   ];
 
   $('#categoryNav').innerHTML = items
@@ -228,7 +240,7 @@ function renderSidebar() {
       return `
         <li>
           <button class="nav-item" data-category="${c.id}" aria-current="${active}" title="${c.blurb}">
-            <span class="tag" data-cat="${c.id}" aria-hidden="true">${c.icon}</span>
+            <span class="tag" data-cat="${c.id}" aria-hidden="true">${tagMark(c)}</span>
             <span class="label">${c.label}</span>
             ${unread ? `<span class="pip">${unread}</span>` : `<span class="count">${total}</span>`}
           </button>
@@ -321,6 +333,18 @@ function safeUrl(url) {
   } catch {
     return '#';
   }
+}
+
+/**
+ * The mark on a category plate: an SVG glyph where one is defined, otherwise
+ * the short text label. Path data comes from our own category table, never
+ * from scraped content.
+ */
+function tagMark(item) {
+  if (item.glyph) {
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${item.glyph}" /></svg>`;
+  }
+  return escapeHtml(item.icon || '');
 }
 
 /** The colour a card is striped with: its first real category, else "other". */
@@ -443,19 +467,19 @@ function renderFeed() {
     if (state.category === 'saved') {
       heading.textContent = 'Stash is empty';
       $('#emptyText').textContent =
-        'Star anything and it waits for you here. No pressure.';
+        'Star anything, bruv, and it sits right here waiting for you.';
     } else if (state.query) {
       heading.textContent = 'Nothing matches';
-      $('#emptyText').textContent = `Lurked everywhere. Not a single mention of “${state.query}”.`;
+      $('#emptyText').textContent = `Lurked everywhere bro. Not a single mention of “${state.query}”.`;
     } else if (state.onlyNew) {
       heading.textContent = 'All caught up';
       $('#emptyText').textContent =
-        'Still lurking. The boards have posted nothing since you last looked.';
+        'You are good, homie. Nothing posted since you last looked. Still lurking.';
     } else {
       heading.textContent = 'Nothing to lurk at yet';
       $('#emptyText').textContent = STATIC
-        ? 'The next scheduled lurk will fill this in.'
-        : 'Hit “Lurk now” to go get the latest from CBSE and NTA.';
+        ? 'Next scheduled lurk will sort you out, bro.'
+        : 'Hit “Lurk now” and I will go get the latest from CBSE and NTA.';
     }
   }
 
@@ -546,7 +570,7 @@ function renderDashboard() {
       return `
         <button class="dash-card" data-category="${escapeHtml(c.id)}" data-cat="${escapeHtml(c.id)}">
           <span class="dash-card-head">
-            <span class="tag" data-cat="${escapeHtml(c.id)}">${escapeHtml(c.icon)}</span>
+            <span class="tag" data-cat="${escapeHtml(c.id)}">${tagMark(c)}</span>
             <span class="dash-card-name">${escapeHtml(c.label)}</span>
             ${unread ? `<span class="pip">${unread}</span>` : `<span class="count">${counts[c.id] ?? 0}</span>`}
           </span>
@@ -856,7 +880,7 @@ async function fetchNow() {
       await refreshStatus();
       toast(
         staticCache.generatedAt === before
-          ? 'Already on the latest lurk.'
+          ? 'Already on the latest lurk, bro.'
           : 'Caught up.',
         'good'
       );
@@ -883,8 +907,8 @@ async function fetchNow() {
     await refreshStatus();
     toast(
       result.added
-        ? `${result.added} fresh drop${result.added === 1 ? '' : 's'}.`
-        : 'Nothing new. The boards are asleep.',
+        ? `${result.added} fresh drop${result.added === 1 ? '' : 's'}, bro.`
+        : 'Nothing new bro. The boards are asleep.',
       result.added ? 'good' : ''
     );
   } catch (err) {
@@ -940,7 +964,7 @@ async function shareNotice(id) {
 
   const text = `${notice.title}\n${notice.url}`;
   if (await copyText(text)) {
-    toast('Yoinked. Link copied.', 'good');
+    toast('Yoinked it for you, bro.', 'good');
   } else {
     // Opening the document would be a surprising answer to "share", so say
     // what happened instead and leave the link selectable in the card.
@@ -1110,7 +1134,7 @@ async function togglePush() {
     try {
       await api('/api/push/unsubscribe', { method: 'POST', body: { endpoint: existing.endpoint } });
       await existing.unsubscribe();
-      toast('Device alerts turned off.');
+      toast('Pings off. Your loss, bro.');
     } catch (err) {
       toast(`Could not turn alerts off: ${err.message}`, 'bad');
     }
@@ -1205,7 +1229,7 @@ function setupInstall() {
     installPrompt = null;
     group.hidden = true;
     renumber(false);
-    if (outcome === 'accepted') toast('Installed. Now it lurks from your home screen.', 'good');
+    if (outcome === 'accepted') toast('Installed. It lurks from your home screen now, bruv.', 'good');
   });
 
   window.addEventListener('appinstalled', () => {
@@ -1448,8 +1472,8 @@ async function sendLocalTestPopup() {
     });
 
     result.innerHTML =
-      'Sent. If you did not see it, check your system notification settings — on Windows, ' +
-      'Focus assist; on a Mac, System Settings → Notifications → your browser.';
+      'Sent it, bro. If nothing showed up, check your system notification settings — on ' +
+      'Windows, Focus assist; on a Mac, System Settings → Notifications → your browser.';
   } catch (err) {
     result.textContent = `Could not show a popup: ${err.message}`;
   } finally {

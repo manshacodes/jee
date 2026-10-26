@@ -32,7 +32,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 164 unit/integration tests
+npm test            # 166 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -381,7 +381,7 @@ server/
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
   js/push-setup.js  browser-side VAPID generation and device subscription
-test/               164 tests, parsers included (served from HTTP fixtures)
+test/               166 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

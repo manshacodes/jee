@@ -502,10 +502,18 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
   background: var(--bg-sunk);
   color: var(--cat-other);
   font-family: var(--font-mono);
-  font-size: 8.5px;
+  /* Numerals only -- "10" and "12" can afford to be bigger than the old
+     four-letter labels, and should read at a glance. */
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   overflow: hidden;
+}
+.nav-item .tag svg,
+.dash-card .tag svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
 }
 /* A single highlight across the plate, so it reads as metal, not as a box. */
 .nav-item .tag::after {
@@ -1767,7 +1775,7 @@ mark {
   background: var(--bg-sunk);
   color: var(--cat-other);
   font-family: var(--font-mono);
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 700;
 }
 .dash-card .tag[data-cat='jee'] { color: var(--cat-jee); }

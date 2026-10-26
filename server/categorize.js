@@ -7,12 +7,38 @@
  * notice -- the user still wants to see it in the "All" feed.
  */
 
+/**
+ * `glyph` is SVG path data drawn on a 24x24 grid; where it is absent the
+ * `icon` string is drawn instead. The two board streams keep numerals on
+ * purpose -- no glyph can tell Class 10 from Class 12, and "10" and "12" are
+ * what students call them anyway.
+ */
 export const CATEGORIES = [
-  { id: 'jee', label: 'JEE', icon: 'J', blurb: 'JEE Main / Advanced, NTA' },
-  { id: 'neet', label: 'NEET UG', icon: 'N', blurb: 'NEET (UG), NTA' },
-  { id: 'class10', label: 'Class 10', icon: 'X', blurb: 'CBSE Secondary' },
-  { id: 'class12', label: 'Class 12', icon: 'XII', blurb: 'CBSE Senior Secondary' },
-  { id: 'other', label: 'Other', icon: '*', blurb: 'Uncategorised notices' },
+  {
+    id: 'jee',
+    label: 'JEE',
+    icon: 'JEE',
+    // A bolt: engineering, and legible at 13px where a gear turns to mush.
+    glyph: 'm13.5 3-7.5 10.5h5l-2.5 7.5 7.5-10.5h-5z',
+    blurb: 'JEE Main / Advanced, NTA',
+  },
+  {
+    id: 'neet',
+    label: 'NEET UG',
+    icon: 'NEET',
+    // A pulse trace: reads as medical instantly, even very small.
+    glyph: 'M3 12h3.5l2-6.5 3.5 13 2.5-6.5H21',
+    blurb: 'NEET (UG), NTA',
+  },
+  { id: 'class10', label: 'Class 10', icon: '10', blurb: 'CBSE Secondary' },
+  { id: 'class12', label: 'Class 12', icon: '12', blurb: 'CBSE Senior Secondary' },
+  {
+    id: 'other',
+    label: 'Other',
+    icon: '*',
+    glyph: 'M5 12h.01M12 12h.01M19 12h.01',
+    blurb: 'Uncategorised notices',
+  },
 ];
 
 export const CATEGORY_IDS = CATEGORIES.map((c) => c.id);
