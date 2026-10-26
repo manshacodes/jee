@@ -51,6 +51,20 @@ const PAGE = 50;
 
 // ---------------------------------------------------------------- helpers
 
+const reducedMotion = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Run a DOM update inside a View Transition when the browser has one.
+ *
+ * Browsers without the API, and anyone who has asked for reduced motion, just
+ * get the update applied directly -- there is no polyfill and none is wanted.
+ */
+function withTransition(update) {
+  if (!document.startViewTransition || reducedMotion()) return update();
+  return document.startViewTransition(update).finished.catch(() => {});
+}
+
 async function api(path, options = {}) {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
@@ -235,7 +249,7 @@ function renderSidebar() {
     .join('');
 }
 
-function noticeCard(n, justIn = false) {
+function noticeCard(n, justIn = false, index = 0) {
   const chips = n.categories
     .map((c) => `<span class="chip" data-cat="${escapeHtml(c)}">${escapeHtml(categoryLabel(c))}</span>`)
     .join('');
@@ -255,7 +269,8 @@ function noticeCard(n, justIn = false) {
     .join('<span class="sep">·</span>');
 
   return `
-    <li class="notice ${n.isNew ? 'is-new' : ''} ${justIn ? 'just-in' : ''}" data-id="${escapeHtml(n.id)}" data-cat="${escapeHtml(primaryCategory(n))}">
+    <li class="notice ${n.isNew ? 'is-new' : ''} ${justIn ? 'just-in' : ''}" data-id="${escapeHtml(n.id)}" data-cat="${escapeHtml(primaryCategory(n))}" style="--i:${index}">
+      <span class="glow" aria-hidden="true"></span>
       <div class="notice-body">
         <h3 class="notice-title">
           <a href="${escapeHtml(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer">${highlight(n.title, n.match)}</a>
@@ -412,22 +427,36 @@ function renderFeed() {
       }
       const group = dateGroupLabel(n.publishedAt || n.firstSeenAt);
       const heading =
-        group === lastGroup ? '' : `<li class="date-label" aria-hidden="true">${escapeHtml(group)}</li>`;
+        group === lastGroup ? '' : `<li class="date-label"><span>${escapeHtml(group)}</span></li>`;
       lastGroup = group;
-      return marker + heading + noticeCard(n);
+      // Cap the stagger: past the first screenful the delay is wasted, and a
+      // 90th card should not wait two seconds to appear.
+      return marker + heading + noticeCard(n, false, Math.min(index, 11));
     })
     .join('');
 
   const empty = state.notices.length === 0;
   $('#emptyState').hidden = !empty;
   if (empty) {
-    $('#emptyText').textContent = state.category === 'saved'
-      ? 'Nothing saved yet. Tap the star on any notice to keep it here.'
-      : state.query
-      ? `No notice title matches “${state.query}”.`
-      : state.onlyNew
-        ? 'No unread notices. New ones will appear here the moment they are published.'
-        : 'Hit “Fetch now” to pull the latest notices from CBSE and NTA.';
+    const empty = $('#emptyState');
+    const heading = empty.querySelector('h3');
+    if (state.category === 'saved') {
+      heading.textContent = 'Nothing saved yet';
+      $('#emptyText').textContent =
+        'Hit the star on any notice and it will wait for you here.';
+    } else if (state.query) {
+      heading.textContent = 'Nothing matches';
+      $('#emptyText').textContent = `Lurked everywhere. No notice mentions “${state.query}”.`;
+    } else if (state.onlyNew) {
+      heading.textContent = 'All caught up';
+      $('#emptyText').textContent =
+        'Still lurking. The boards have posted nothing new since you last looked.';
+    } else {
+      heading.textContent = 'Nothing to lurk at yet';
+      $('#emptyText').textContent = STATIC
+        ? 'The next scheduled check will fill this in.'
+        : 'Hit “Fetch now” to pull the latest from CBSE and NTA.';
+    }
   }
 
   $('#loadMore').hidden = state.notices.length >= state.total;
@@ -1478,6 +1507,87 @@ function matchesFilter(n) {
   return true;
 }
 
+// ---------------------------------------------------------------- chrome
+
+/**
+ * Scroll progress and the back-to-top button.
+ *
+ * One passive scroll listener that does nothing but set a flag; the actual
+ * work happens once per frame. Reading scrollHeight in the handler itself
+ * would force a layout on every scroll event.
+ */
+function wireScrollChrome() {
+  const bar = $('#scrollProgress');
+  const toTop = $('#toTop');
+  let queued = false;
+
+  const paint = () => {
+    queued = false;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+    bar.style.transform = `scaleX(${ratio})`;
+    toTop.hidden = window.scrollY < 600;
+  };
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(paint);
+    },
+    { passive: true }
+  );
+
+  toTop.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  });
+
+  paint();
+}
+
+/**
+ * A highlight that follows the cursor across the hovered card, like light
+ * moving over brushed metal.
+ *
+ * The glow is a fixed-size element moved with a transform, not a gradient
+ * whose position is rewritten -- a transform is composited, so this never
+ * repaints the card or its text. One pointermove listener for the whole list,
+ * coalesced to one update per frame.
+ */
+function wireCardGlow() {
+  if (reducedMotion() || window.matchMedia('(hover: none)').matches) return;
+
+  const list = $('#noticeList');
+  let pending = null;
+  let queued = false;
+
+  const paint = () => {
+    queued = false;
+    if (!pending) return;
+    const { card, x, y } = pending;
+    const glow = card.firstElementChild;
+    if (glow && glow.classList.contains('glow')) {
+      glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    }
+  };
+
+  list.addEventListener(
+    'pointermove',
+    (event) => {
+      const card = event.target.closest?.('.notice');
+      if (!card) return;
+      const box = card.getBoundingClientRect();
+      // Centre the glow on the pointer; its own CSS offsets it by half.
+      pending = { card, x: event.clientX - box.left, y: event.clientY - box.top };
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(paint);
+    },
+    { passive: true }
+  );
+}
+
 // ---------------------------------------------------------------- wiring
 
 function wireEvents() {
@@ -1503,7 +1613,7 @@ function wireEvents() {
     state.pending = [];
     renderPendingBanner();
     closeSidebar();
-    loadNotices().catch((err) => toast(err.message, 'bad'));
+    withTransition(() => loadNotices().catch((err) => toast(err.message, 'bad')));
   });
 
   $('#sourceNav').addEventListener('click', (e) => {
@@ -1511,7 +1621,7 @@ function wireEvents() {
     if (!btn) return;
     state.source = btn.dataset.source;
     closeSidebar();
-    loadNotices().catch((err) => toast(err.message, 'bad'));
+    withTransition(() => loadNotices().catch((err) => toast(err.message, 'bad')));
   });
 
   let searchTimer;
@@ -1526,7 +1636,7 @@ function wireEvents() {
 
   $('#onlyNew').addEventListener('change', (e) => {
     state.onlyNew = e.target.checked;
-    loadNotices().catch((err) => toast(err.message, 'bad'));
+    withTransition(() => loadNotices().catch((err) => toast(err.message, 'bad')));
   });
 
   $('#noticeList').addEventListener('click', (e) => {
@@ -1654,6 +1764,8 @@ function closeSidebar() {
 async function main() {
   captureVisit();
   wireEvents();
+  wireScrollChrome();
+  wireCardGlow();
   setupInstall();
   showSkeletons();
 

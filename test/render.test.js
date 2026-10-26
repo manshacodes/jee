@@ -242,3 +242,20 @@ test('a card offers both share and star', async () => {
   assert.match(html, /data-star="abc123"/);
   assert.match(html, /aria-label="Share this notice"/);
 });
+
+test('cards carry a stagger index for the entrance animation', async () => {
+  const { noticeCard } = await loadRenderer();
+  assert.match(noticeCard(notice(), false, 0), /style="--i:0"/);
+  assert.match(noticeCard(notice(), false, 7), /style="--i:7"/);
+});
+
+test('each card has a glow layer for the cursor spotlight', async () => {
+  const { noticeCard } = await loadRenderer();
+  const html = noticeCard(notice());
+  assert.match(html, /<span class="glow" aria-hidden="true"><\/span>/);
+  // It must be the first element child: the pointer handler reaches it with
+  // firstElementChild rather than a query, to stay cheap per frame.
+  const firstTag = /<li[^>]*>\s*(<[a-z]+)/.exec(html)?.[1];
+  assert.equal(firstTag, '<span', 'the glow is not the first child of the card');
+  assert.ok(html.indexOf('class="glow"') < html.indexOf('notice-body'));
+});

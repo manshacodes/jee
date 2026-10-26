@@ -33,6 +33,9 @@
   <body>
     <a class="skip-link" href="#feed">Skip to notifications</a>
 
+    <!-- How far through the feed you are. Width is driven by a transform. -->
+    <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
     <header class="topbar">
       <button class="icon-btn only-mobile" id="menuToggle" aria-label="Show categories" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -161,6 +164,10 @@
         </div>
 
         <button class="btn ghost full load-more" id="loadMore" hidden>Load older notices</button>
+
+        <button class="to-top" id="toTop" hidden aria-label="Back to the top">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+        </button>
       </main>
     </div>
 
