@@ -565,7 +565,10 @@ function renderDashboard() {
   $('#dashCards').innerHTML = state.meta.categories
     .filter((c) => c.id !== 'other')
     .map((c) => {
-      const latest = pool.find((n) => n.categories.includes(c.id));
+      // Most recent by date, not simply the first match in the array: array
+      // order can be influenced by unread state, and "latest in this stream"
+      // has to mean latest.
+      const latest = newestIn(pool, c.id);
       const unread = counts[`${c.id}:new`] ?? 0;
       return `
         <button class="dash-card" data-category="${escapeHtml(c.id)}" data-cat="${escapeHtml(c.id)}">
@@ -588,6 +591,17 @@ function renderDashboard() {
         </button>`;
     })
     .join('');
+}
+
+/** The most recently published notice in a stream, by date. */
+function newestIn(list, categoryId) {
+  let best = null;
+  for (const n of list) {
+    if (!n.categories.includes(categoryId)) continue;
+    const key = n.publishedAt || n.firstSeenAt || '';
+    if (!best || key > (best.publishedAt || best.firstSeenAt || '')) best = n;
+  }
+  return best;
 }
 
 /** Last run time, whichever mode we are in. */

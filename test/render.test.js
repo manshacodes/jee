@@ -285,3 +285,26 @@ test('every category still has a text label as a fallback', async () => {
     assert.ok(c.icon && c.icon.length <= 4, `${c.id} has no short fallback label`);
   }
 });
+
+test('"latest in a stream" is the newest by date, not the first in the array', async () => {
+  const src = await readFile(join(HERE, '..', 'public', 'js', 'app.js'), 'utf8');
+  const from = src.indexOf('function newestIn(');
+  const newestIn = new Function(`${src.slice(from, src.indexOf('\n}', from) + 2)}; return newestIn;`)();
+
+  // Deliberately out of order, as an unread-pinned feed would be.
+  const list = [
+    { title: 'Older, listed first', categories: ['jee'], publishedAt: '2026-10-16' },
+    { title: 'Newest', categories: ['jee'], publishedAt: '2026-10-24' },
+    { title: 'Oldest', categories: ['jee'], publishedAt: '2026-05-04' },
+    { title: 'Other stream', categories: ['neet'], publishedAt: '2026-12-01' },
+  ];
+  assert.equal(newestIn(list, 'jee').title, 'Newest');
+  assert.equal(newestIn(list, 'neet').title, 'Other stream');
+  assert.equal(newestIn(list, 'class10'), null);
+
+  // Falls back to discovery time when a notice carries no published date.
+  assert.equal(
+    newestIn([{ title: 'Undated', categories: ['jee'], firstSeenAt: '2027-01-01T00:00:00Z' }], 'jee').title,
+    'Undated'
+  );
+});

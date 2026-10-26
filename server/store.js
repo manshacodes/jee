@@ -144,16 +144,24 @@ export async function mergeNotices(scraped) {
 }
 
 /**
- * Newest first, with everything discovered on the latest run pinned to the
- * top -- the user wants new notices above the back catalogue while the older
- * ones stay readable.
+ * Newest first.
  *
- * Within each group we order by publication date (inferred from list position
+ * With `pinNew` (the default, used by the server) everything discovered on the
+ * latest run sits above the back catalogue, so new notices are noticed.
+ *
+ * The static build passes `pinNew: false`. There, "unread" is per-device and
+ * recomputed in the browser from a localStorage watermark, so a server-side
+ * isNew flag means nothing to the reader -- but baking it into the order still
+ * reordered the feed. When a long-failing source finally came back, five
+ * notices from the 16th were marked new and pinned above the 24th's, which is
+ * simply the wrong order for anyone reading it.
+ *
+ * Within a group we order by publication date (inferred from list position
  * when the board did not publish one), falling back to discovery time.
  */
-export function sortNotices(list) {
+export function sortNotices(list, { pinNew = true } = {}) {
   return list.sort((a, b) => {
-    if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
+    if (pinNew && a.isNew !== b.isNew) return a.isNew ? -1 : 1;
     const ak = a.publishedAt || a.firstSeenAt;
     const bk = b.publishedAt || b.firstSeenAt;
     if (ak !== bk) return ak < bk ? 1 : -1;

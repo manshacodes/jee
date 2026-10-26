@@ -131,3 +131,11 @@ test('every versioned asset is cache-busted, not just the script', () => {
   assert.ok(Number(js[1]) > 0);
   assert.ok(!/href="\.\/css\/app\.css"/.test(html), 'an unstamped stylesheet link survived');
 });
+
+test('the published feed is in date order', async () => {
+  // Anything else means the newest notice is not the one at the top, and the
+  // overview's "latest per stream" picks the wrong one.
+  const dates = notices.notices.map((n) => n.publishedAt || n.firstSeenAt);
+  const sorted = [...dates].sort().reverse();
+  assert.deepEqual(dates, sorted, 'the published feed is not newest-first');
+});

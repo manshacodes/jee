@@ -19,7 +19,9 @@ const ROOT = join(HERE, '..');
 const PUBLIC = join(ROOT, 'public');
 const OUT = process.env.STATIC_OUT || join(ROOT, 'dist');
 
-const notices = sortNotices(await getNotices());
+// Chronological only: the browser decides what is unread for this device, so
+// pinning the server's idea of "new" would just reorder the feed wrongly.
+const notices = sortNotices(await getNotices(), { pinNew: false });
 
 await rm(OUT, { recursive: true, force: true });
 await mkdir(OUT, { recursive: true });

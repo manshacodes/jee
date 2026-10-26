@@ -163,3 +163,22 @@ test('a corrupt store file falls back to defaults instead of crashing', async ()
   await writeFile(join(dir, 'notifications.json'), '{ this is not json', 'utf8');
   assert.deepEqual(await store.getNotices(), []);
 });
+
+test('the static build orders purely by date, ignoring unread state', async () => {
+  // The case this comes from: a long-failing source came back and its notices
+  // were flagged new. Pinning them put notices from the 16th above the 24th's,
+  // which is simply the wrong order for a reader.
+  await store.mergeNotices([notice({ title: 'Recent', url: 'https://x/1.pdf', publishedAt: '2026-10-24' })]);
+  await store.mergeNotices([
+    notice({ title: 'Recent', url: 'https://x/1.pdf', publishedAt: '2026-10-24' }),
+    notice({ title: 'Older but just discovered', url: 'https://x/2.pdf', publishedAt: '2026-10-16' }),
+  ]);
+  const all = await store.getNotices();
+
+  const chronological = store.sortNotices([...all], { pinNew: false });
+  assert.equal(chronological[0].title, 'Recent', 'an older notice was pinned above a newer one');
+
+  // The server keeps pinning new ones, which is what makes them noticeable.
+  const pinned = store.sortNotices([...all], { pinNew: true });
+  assert.equal(pinned[0].title, 'Older but just discovered');
+});
