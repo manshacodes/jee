@@ -48,3 +48,27 @@ test('reduced motion disables the decorative movement', () => {
   assert.match(reduced, /\.notice\s*\{\s*animation:\s*none/);
   assert.match(reduced, /\.glow\s*\{\s*display:\s*none/);
 });
+
+test('the scrim sits below the panels it dims', () => {
+  // Putting the scrim above the sidebar made the mobile menu open behind a
+  // blurred overlay: you saw the blur, could not see or tap the menu.
+  const num = (name) => {
+    const m = new RegExp(`${name}:\\s*(\\d+)`).exec(css);
+    assert.ok(m, `${name} is not defined`);
+    return Number(m[1]);
+  };
+  const scrim = num('--z-scrim');
+  assert.ok(scrim > num('--z-grain'), 'the scrim is under the grain overlay');
+  assert.ok(scrim < num('--z-sidebar'), 'the scrim covers the sidebar');
+  assert.ok(scrim < num('--z-drawer'), 'the scrim covers the settings drawer');
+  assert.ok(num('--z-toast') > num('--z-drawer'), 'toasts can be hidden by the drawer');
+});
+
+test('layering goes through the scale, not scattered magic numbers', () => {
+  // Any stray `z-index: <number>` outside the token block is how the scrim
+  // bug got in: a blanket rule silently outranked a component.
+  const body = css.slice(css.indexOf('/* ========================================================== base */'));
+  const strays = [...body.matchAll(/z-index:\s*(\d+)/g)].map((m) => Number(m[1]));
+  // Only the two tiny in-card values are allowed to be literal.
+  assert.deepEqual(strays.sort((a, b) => a - b), [1, 2], `unexpected literal z-index values: ${strays}`);
+});

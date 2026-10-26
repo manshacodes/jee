@@ -215,7 +215,7 @@ function renderSidebar() {
   const counts = state.counts;
 
   const items = [
-    { id: 'all', label: 'All notifications', icon: '∗', blurb: 'Every source' },
+    { id: 'all', label: 'All notifications', icon: 'ALL', blurb: 'Every source' },
     ...state.meta.categories,
     { id: 'saved', label: 'Saved', icon: '★', blurb: 'Notices you starred on this device' },
   ];
@@ -1074,13 +1074,21 @@ function setupInstall() {
   const group = $('#installGroup');
   if (!group) return;
 
+  const renumber = (shown) => {
+    // The install block is conditional, so Alerts is 03 or 04 depending.
+    const alerts = $('#alertsNumber');
+    if (alerts) alerts.textContent = shown ? '04' : '03';
+  };
+
   if (isInstalled()) {
     group.hidden = true;
+    renumber(false);
     return;
   }
 
   if (iosNeedsInstall()) {
     group.hidden = false;
+    renumber(true);
     $('#installLabel').textContent = 'How to add to home screen';
     $('#installHint').innerHTML =
       'Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>. ' +
@@ -1097,6 +1105,7 @@ function setupInstall() {
     event.preventDefault();
     installPrompt = event;
     group.hidden = false;
+    renumber(true);
     $('#installLabel').textContent = 'Install app';
     $('#installHint').textContent =
       'Opens in its own window and keeps working offline once loaded.';
@@ -1108,12 +1117,14 @@ function setupInstall() {
     const { outcome } = await installPrompt.userChoice;
     installPrompt = null;
     group.hidden = true;
+    renumber(false);
     if (outcome === 'accepted') toast('Installed.', 'good');
   });
 
   window.addEventListener('appinstalled', () => {
     group.hidden = true;
     installPrompt = null;
+    renumber(false);
   });
 }
 

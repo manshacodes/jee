@@ -34,12 +34,18 @@
   --warn-soft: #fbeedf;
 
   /* category ------------------------------------------------------------ */
-  --cat-jee: #4338ca;
-  --cat-neet: #0f766e;
-  --cat-class10: #be185d;
-  --cat-class12: #6d28d9;
-  --cat-other: #6b7280;
+  /* Signal colours rather than pastels: saturated enough to tell apart at
+     chip size, dark enough to sit on paper without glowing. */
+  --cat-jee: #1f4fd8;
+  --cat-neet: #06785f;
+  --cat-class10: #9a5b00;
+  --cat-class12: #c01e55;
+  --cat-other: #5e666b;
   --cat-all: #0d0d0d;
+
+  /* search highlight ----------------------------------------------------- */
+  --mark-bg: #f6d894;
+  --mark-text: #3a2a05;
 
   /* type ---------------------------------------------------------------- */
   --font-display: Anton, 'Arial Narrow', Impact, sans-serif;
@@ -59,6 +65,21 @@
 
   --sidebar-w: 256px;
   --topbar-h: 62px;
+
+  /*
+   * Layering, lowest first. These have to be ordered deliberately: the grain
+   * overlay sits above the page, so anything that must appear over the page
+   * has to clear it, and the scrim has to sit *under* the panels it dims.
+   */
+  --z-sticky-label: 5;
+  --z-topbar: 30;
+  --z-totop: 35;
+  --z-grain: 9000;
+  --z-scrim: 9100;
+  --z-sidebar: 9200;
+  --z-drawer: 9300;
+  --z-toast: 9400;
+  --z-progress: 9500;
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -84,12 +105,14 @@
   --new-soft: #0b2a22;
   --warn: #e8a35e;
   --warn-soft: #2b1f0f;
-  --cat-jee: #9aa4ff;
-  --cat-neet: #3fd9c4;
-  --cat-class10: #f87fb4;
-  --cat-class12: #b79cff;
+  --cat-jee: #5e9bff;
+  --cat-neet: #2fd6a8;
+  --cat-class10: #f0a93b;
+  --cat-class12: #ff6f91;
   --cat-other: #8d989c;
   --cat-all: #e1e5e5;
+  --mark-bg: #4a3a12;
+  --mark-text: #ffd98a;
   --shadow-sm: none;
   --shadow: 0 1px 2px rgb(0 0 0 / 50%);
   --shadow-md: 0 2px 12px -4px rgb(0 0 0 / 70%);
@@ -117,12 +140,14 @@
     --new-soft: #0b2a22;
     --warn: #e8a35e;
     --warn-soft: #2b1f0f;
-    --cat-jee: #9aa4ff;
-    --cat-neet: #3fd9c4;
-    --cat-class10: #f87fb4;
-    --cat-class12: #b79cff;
+    --cat-jee: #5e9bff;
+    --cat-neet: #2fd6a8;
+    --cat-class10: #f0a93b;
+    --cat-class12: #ff6f91;
     --cat-other: #8d989c;
     --cat-all: #e1e5e5;
+  --mark-bg: #4a3a12;
+  --mark-text: #ffd98a;
     --shadow-sm: none;
     --shadow: 0 1px 2px rgb(0 0 0 / 50%);
     --shadow-md: 0 2px 12px -4px rgb(0 0 0 / 70%);
@@ -207,7 +232,7 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
   position: absolute;
   left: -9999px;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-progress);
   padding: 10px 18px;
   background: var(--accent);
   color: var(--accent-text);
@@ -220,7 +245,7 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: var(--z-topbar);
   height: var(--topbar-h);
   display: flex;
   align-items: center;
@@ -459,24 +484,49 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
 .nav-item:hover { background: var(--bg-hover); color: var(--text); }
 .nav-item[aria-current='true'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
+/*
+ * Engraved plates rather than solid blocks of colour: the chip is the same
+ * brushed metal as the wordmark, with the category colour carried by the
+ * label and a hairline rule instead of a pastel fill, which fought the
+ * monochrome page.
+ */
 .nav-item .tag {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 23px;
-  height: 23px;
+  width: 26px;
+  height: 22px;
   flex: none;
-  border-radius: 7px;
-  font-size: 10px;
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: var(--bg-sunk);
+  color: var(--cat-other);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #fff;
-  background: var(--cat-other);
+  letter-spacing: 0.02em;
+  overflow: hidden;
 }
-.nav-item .tag[data-cat='jee'] { background: var(--cat-jee); }
-.nav-item .tag[data-cat='neet'] { background: var(--cat-neet); }
-.nav-item .tag[data-cat='class10'] { background: var(--cat-class10); }
-.nav-item .tag[data-cat='class12'] { background: var(--cat-class12); }
-.nav-item .tag[data-cat='all'] { background: var(--cat-all); }
+/* A single highlight across the plate, so it reads as metal, not as a box. */
+.nav-item .tag::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, var(--metal-sheen) 0%, transparent 52%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.nav-item[aria-current='true'] .tag {
+  border-color: color-mix(in srgb, currentColor 65%, transparent);
+  background: color-mix(in srgb, currentColor 12%, var(--bg-sunk));
+}
+
+.nav-item .tag[data-cat='jee'] { color: var(--cat-jee); }
+.nav-item .tag[data-cat='neet'] { color: var(--cat-neet); }
+.nav-item .tag[data-cat='class10'] { color: var(--cat-class10); }
+.nav-item .tag[data-cat='class12'] { color: var(--cat-class12); }
+.nav-item .tag[data-cat='all'] { color: var(--text); }
+.nav-item .tag[data-cat='saved'] { color: #d8a33a; }
 
 .nav-item .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -665,7 +715,7 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
   position: sticky;
   /* Sits directly under the toolbar as it pins. */
   top: var(--topbar-h);
-  z-index: 5;
+  z-index: var(--z-sticky-label);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -878,7 +928,7 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
 .scrim {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--z-scrim);
   background: rgb(8 11 18 / 50%);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
@@ -890,7 +940,7 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 50;
+  z-index: var(--z-drawer);
   width: min(400px, 100vw);
   height: 100dvh;
   display: flex;
@@ -1041,7 +1091,7 @@ select:disabled, input:disabled, textarea:disabled { opacity: 0.55; cursor: not-
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 60;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1211,7 +1261,7 @@ select:disabled, input:disabled, textarea:disabled { opacity: 0.55; cursor: not-
     position: fixed;
     top: var(--topbar-h);
     left: 0;
-    z-index: 45;
+    z-index: var(--z-sidebar);
     width: min(286px, 86vw);
     box-shadow: var(--shadow-lg);
     transform: translateX(-102%);
@@ -1376,7 +1426,7 @@ body::after {
   content: '';
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-grain);
   pointer-events: none;
   opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -1429,10 +1479,10 @@ body::after {
 
 /* ========================================================== search matches */
 mark {
-  padding: 0 2px;
+  padding: 0 3px;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--new) 26%, transparent);
-  color: inherit;
+  background: var(--mark-bg);
+  color: var(--mark-text);
   font-weight: 700;
 }
 
@@ -1465,9 +1515,17 @@ mark {
   white-space: nowrap;
 }
 
-/* The grain layer must not sit over modals. */
-.drawer, .setup, .scrim, .toast-stack { z-index: 10000; }
-.setup::backdrop { z-index: 9999; }
+/*
+ * The grain layer sits above the page, so every panel has to clear it -- but
+ * the scrim must stay below the sidebar and drawer it dims. Lumping the scrim
+ * in with them put it on top of the mobile sidebar, which then showed as a
+ * blurred screen with no menu.
+ */
+.scrim { z-index: var(--z-scrim); }
+.sidebar { z-index: var(--z-sidebar); }
+.drawer { z-index: var(--z-drawer); }
+.toast-stack { z-index: var(--z-toast); }
+/* <dialog> opened with showModal() lives in the top layer; z-index is moot. */
 
 /* ==========================================================================
    Motion and chrome
@@ -1479,7 +1537,7 @@ mark {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 10001;
+  z-index: var(--z-progress);
   width: 100%;
   height: 2px;
   background: var(--metal);
@@ -1494,7 +1552,7 @@ mark {
   position: fixed;
   right: 22px;
   bottom: 22px;
-  z-index: 35;
+  z-index: var(--z-totop);
   display: grid;
   place-items: center;
   width: 40px;
