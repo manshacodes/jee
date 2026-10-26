@@ -46,7 +46,7 @@ function buildPayload(notices, siteUrl) {
   const what = streams.map((c) => labels[c] || c).join(', ') || 'Exam';
 
   return JSON.stringify({
-    title: notices.length === 1 ? `New ${what} notice` : `${notices.length} new ${what} notices`,
+    title: notices.length === 1 ? `${what} just dropped` : `${notices.length} ${what} drops`,
     body:
       notices.length === 1
         ? notices[0].title.slice(0, 240)

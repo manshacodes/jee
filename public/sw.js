@@ -13,12 +13,12 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: 'lurk :p', body: event.data?.text() || 'New notice published' };
+    payload = { title: 'lurk :p', body: event.data?.text() || 'Something just dropped' };
   }
 
   const title = payload.title || 'lurk :p';
   const options = {
-    body: payload.body || 'A new notice has been published.',
+    body: payload.body || 'Something just dropped on the boards.',
     // One tag means a burst of notices collapses into a single alert rather
     // than stacking a dozen of them on the lock screen.
     tag: payload.tag || 'lurk',

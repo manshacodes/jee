@@ -79,7 +79,7 @@ test('the overview only claims a stream has a notice when one is loaded', async 
   const body = src.slice(from, src.indexOf('\n}', from));
   // A stream with nothing in the loaded page must say so rather than show a
   // stale or unrelated notice.
-  assert.match(body, /Nothing recent/);
+  assert.match(body, /Nothing lately/);
   // And it must only render on the unfiltered view.
   assert.match(body, /state\.category === 'all' && state\.source === 'all' && !state\.query && !state\.onlyNew/);
 });

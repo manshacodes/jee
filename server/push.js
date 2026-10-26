@@ -58,10 +58,10 @@ export async function broadcastNewNotices(notices) {
   const headline =
     relevant.length === 1
       ? relevant[0].title
-      : `${relevant.length} new notices from CBSE / NTA`;
+      : `${relevant.length} new drops from CBSE / NTA`;
 
   const payload = JSON.stringify({
-    title: relevant.length === 1 ? `New: ${relevant[0].sourceLabel}` : 'lurk :p',
+    title: relevant.length === 1 ? `${relevant[0].sourceLabel} just dropped` : 'lurk :p',
     body: headline.slice(0, 240),
     tag: 'lurk',
     url: relevant.length === 1 ? relevant[0].url : '/',

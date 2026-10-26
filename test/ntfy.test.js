@@ -65,7 +65,7 @@ test('a single notice posts to the topic with its title and link', async () => {
   assert.match(received[0].body, /JEE \(Main\) 2027 Session 1/);
   // A lone notice should deep-link to the document itself.
   assert.equal(received[0].headers.click, 'https://jeemain.nta.nic.in/a.pdf');
-  assert.match(received[0].headers.title, /New jee notice/);
+  assert.match(received[0].headers.title, /jee/i);
 });
 
 test('a batch summarises and links to the site instead', async () => {
@@ -73,7 +73,7 @@ test('a batch summarises and links to the site instead', async () => {
   await notifyNtfy([notice(), notice({ title: 'Second' }), notice({ title: 'Third' })], {
     siteUrl: 'https://example.github.io/jee/',
   });
-  assert.match(received[0].headers.title, /3 new exam notices/);
+  assert.match(received[0].headers.title, /\b3\b/);
   assert.equal(received[0].headers.click, 'https://example.github.io/jee/');
   assert.match(received[0].body, /Second/);
   assert.match(received[0].body, /Third/);

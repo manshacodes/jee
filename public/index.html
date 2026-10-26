@@ -47,7 +47,7 @@
         </span>
         <span class="brand-text">
           <strong>lurk<span class="tongue"> :p</span></strong>
-          <small>Watching the boards for you</small>
+          <small>Lurking so you don’t have to</small>
         </span>
       </div>
 
@@ -87,12 +87,12 @@
       <!-- ---------------- sidebar ---------------- -->
       <aside class="sidebar" id="sidebar" aria-label="Categories and sources">
         <nav class="nav-group" aria-label="Categories">
-          <h2 class="nav-title"><span>01</span> Categories</h2>
+          <h2 class="nav-title"><span>01</span> What you lurk</h2>
           <ul class="nav-list" id="categoryNav"></ul>
         </nav>
 
         <nav class="nav-group" aria-label="Sources">
-          <h2 class="nav-title"><span>02</span> Sources</h2>
+          <h2 class="nav-title"><span>02</span> Where we lurk</h2>
           <ul class="nav-list compact" id="sourceNav"></ul>
         </nav>
 
@@ -109,15 +109,15 @@
         </div>
 
         <div class="nav-group">
-          <h2 class="nav-title"><span id="alertsNumber">03</span> Alerts</h2>
+          <h2 class="nav-title"><span id="alertsNumber">03</span> Pings</h2>
           <button class="btn ghost full" id="enablePush">
             <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10.3 21a2 2 0 0 0 3.4 0" />
             </svg>
-            <span id="enablePushLabel">Enable device alerts</span>
+            <span id="enablePushLabel">Get pinged</span>
           </button>
           <p class="hint" id="pushHint">
-            Get a desktop or phone alert the moment a new notice is published.
+            Get pinged the second something drops — phone or laptop.
           </p>
         </div>
 
@@ -138,14 +138,14 @@
           <div class="feed-tools">
             <label class="search">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-              <input type="search" id="search" placeholder="Search notice titles…" aria-label="Search notice titles" />
+              <input type="search" id="search" placeholder="search the boards…" aria-label="Search notice titles" />
             </label>
             <label class="switch small">
               <input type="checkbox" id="onlyNew" />
               <span class="track" aria-hidden="true"></span>
-              <span>Unread only</span>
+              <span>Only the new stuff</span>
             </label>
-            <button class="btn ghost" id="markAllRead">Mark all read</button>
+            <button class="btn ghost" id="markAllRead">Seen it all</button>
           </div>
         </div>
 
@@ -157,7 +157,7 @@
 
         <div class="banner" id="newBanner" hidden>
           <span id="newBannerText"></span>
-          <button class="btn tiny" id="newBannerShow">Show</button>
+          <button class="btn tiny" id="newBannerShow">Show me</button>
         </div>
 
         <div class="banner warn" id="errorBanner" hidden></div>
@@ -165,11 +165,11 @@
         <ul class="notice-list" id="noticeList"></ul>
 
         <div class="empty" id="emptyState" hidden>
-          <h3>Nothing here yet</h3>
+          <h3>Nothing to lurk at</h3>
           <p id="emptyText">Hit “Fetch now” to pull the latest notices from CBSE and NTA.</p>
         </div>
 
-        <button class="btn ghost full load-more" id="loadMore" hidden>Load older notices</button>
+        <button class="btn ghost full load-more" id="loadMore" hidden>Dig deeper</button>
 
         <button class="to-top" id="toTop" hidden aria-label="Back to the top">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
@@ -240,7 +240,7 @@
     <!-- ------------- push setup (static builds only) ------------- -->
     <dialog class="setup" id="pushSetup" aria-labelledby="pushSetupTitle">
       <header class="setup-head">
-        <h2 id="pushSetupTitle">Turn on popup alerts</h2>
+        <h2 id="pushSetupTitle">Get pinged</h2>
         <button class="icon-btn" id="pushSetupClose" aria-label="Close">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
@@ -248,13 +248,13 @@
 
       <div class="setup-body" id="pushSetupBody">
         <p class="setup-intro">
-          This gets you notifications like Google Calendar's — a popup on this device even when
-          the site is closed. It is free. Because the site has no server, the one-time step below
-          stores your device in your repository's secrets, which stay private.
+          Popups on this device even when the site is closed — like a calendar reminder,
+          except it is your result dropping. Free. The site has no server, so the one-time
+          step below parks your device in your repo’s secrets, which stay private.
         </p>
 
         <div class="setup-step" id="stepSubscribe">
-          <h3><span class="step-n">1</span> Allow notifications</h3>
+          <h3><span class="step-n">1</span> Let it ping you</h3>
           <p class="hint" id="subscribeHint">Your browser will ask for permission.</p>
           <button class="btn primary" id="pushSubscribe">Allow and continue</button>
         </div>
@@ -288,12 +288,11 @@
         </div>
 
         <div class="setup-step" id="stepDone" hidden>
-          <h3><span class="step-n">3</span> Check it works</h3>
+          <h3><span class="step-n">3</span> See if it lands</h3>
           <p class="hint">
-            This sends a popup to this device right now, so you can see that notifications are
-            allowed and working here.
+            Fires a ping at this device right now, so you can see it actually lands.
           </p>
-          <button class="btn" id="pushTestLocal">Send a test popup</button>
+          <button class="btn" id="pushTestLocal">Send a test ping</button>
           <p class="hint" id="pushTestResult" hidden></p>
 
           <p class="hint" style="margin-top: 14px">

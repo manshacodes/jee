@@ -88,7 +88,7 @@ test('a burst is summarised into a single count', async () => {
   stubSend();
   await push.broadcastNewNotices([notice(), notice({ id: 'b' }), notice({ id: 'c' })]);
   const payload = JSON.parse(sends[0].payload);
-  assert.match(payload.body, /3 new notices/);
+  assert.match(payload.body, /\b3\b/);
   assert.equal(payload.count, 3);
   assert.equal(payload.url, '/', 'a burst should open the app, not one arbitrary notice');
 });

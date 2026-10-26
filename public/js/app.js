@@ -217,7 +217,7 @@ function renderSidebar() {
   const items = [
     { id: 'all', label: 'All notifications', icon: 'ALL', blurb: 'Every source' },
     ...state.meta.categories,
-    { id: 'saved', label: 'Saved', icon: '★', blurb: 'Notices you starred on this device' },
+    { id: 'saved', label: 'Stash', icon: '★', blurb: 'Notices you starred on this device' },
   ];
 
   $('#categoryNav').innerHTML = items
@@ -422,7 +422,7 @@ function renderFeed() {
       if (!markerDrawn && index === sinceCount) {
         markerDrawn = true;
         marker =
-          `<li class="since-marker"><span>${sinceCount} new since ` +
+          `<li class="since-marker"><span>${sinceCount} dropped since ` +
           `${escapeHtml(shortWhen(previousVisit))}</span></li>`;
       }
       const group = dateGroupLabel(n.publishedAt || n.firstSeenAt);
@@ -441,21 +441,21 @@ function renderFeed() {
     const empty = $('#emptyState');
     const heading = empty.querySelector('h3');
     if (state.category === 'saved') {
-      heading.textContent = 'Nothing saved yet';
+      heading.textContent = 'Stash is empty';
       $('#emptyText').textContent =
-        'Hit the star on any notice and it will wait for you here.';
+        'Star anything and it waits for you here. No pressure.';
     } else if (state.query) {
       heading.textContent = 'Nothing matches';
-      $('#emptyText').textContent = `Lurked everywhere. No notice mentions “${state.query}”.`;
+      $('#emptyText').textContent = `Lurked everywhere. Not a single mention of “${state.query}”.`;
     } else if (state.onlyNew) {
       heading.textContent = 'All caught up';
       $('#emptyText').textContent =
-        'Still lurking. The boards have posted nothing new since you last looked.';
+        'Still lurking. The boards have posted nothing since you last looked.';
     } else {
       heading.textContent = 'Nothing to lurk at yet';
       $('#emptyText').textContent = STATIC
-        ? 'The next scheduled check will fill this in.'
-        : 'Hit “Fetch now” to pull the latest from CBSE and NTA.';
+        ? 'The next scheduled lurk will fill this in.'
+        : 'Hit “Lurk now” to go get the latest from CBSE and NTA.';
     }
   }
 
@@ -465,7 +465,7 @@ function renderFeed() {
     state.category === 'all'
       ? 'All notifications'
       : state.category === 'saved'
-        ? 'Saved'
+        ? 'Stash'
         : categoryLabel(state.category);
   $('#feedTitle').textContent = scope;
 
@@ -516,13 +516,13 @@ function renderDashboard() {
   const sourceTotal = state.meta.sources.length;
 
   const stats = [
-    { label: 'Tracking', value: counts.all ?? 0, unit: 'notices' },
+    { label: 'On watch', value: counts.all ?? 0, unit: 'notices' },
     { label: 'Unread', value: counts.new ?? 0, unit: counts.new === 1 ? 'notice' : 'notices', hot: (counts.new ?? 0) > 0 },
-    { label: 'Last check', value: generatedAt ? relativeTime(generatedAt) : '—', unit: '' },
+    { label: 'Last lurk', value: generatedAt ? relativeTime(generatedAt) : '—', unit: '' },
     {
       label: 'Sources',
       value: `${sourceTotal - failing}/${sourceTotal}`,
-      unit: failing ? 'one failing' : 'healthy',
+      unit: failing ? 'one ghosting' : 'all good',
       warn: failing > 0,
     },
   ];
@@ -551,7 +551,7 @@ function renderDashboard() {
             ${unread ? `<span class="pip">${unread}</span>` : `<span class="count">${counts[c.id] ?? 0}</span>`}
           </span>
           <span class="dash-card-latest">${
-            latest ? highlight(latest.title, '') : 'Nothing recent'
+            latest ? highlight(latest.title, '') : 'Nothing lately'
           }</span>
           <span class="dash-card-when">${
             latest
@@ -583,8 +583,8 @@ function renderPendingBanner() {
   banner.hidden = false;
   $('#newBannerText').textContent =
     state.pending.length === 1
-      ? '1 new notice just arrived'
-      : `${state.pending.length} new notices just arrived`;
+      ? '1 just dropped'
+      : `${state.pending.length} just dropped`;
 }
 
 function renderStatus(status) {
@@ -593,29 +593,29 @@ function renderStatus(status) {
 
   if (status.running) {
     pill.dataset.state = 'busy';
-    text.textContent = 'Fetching…';
+    text.textContent = 'Lurking…';
   } else {
     const failed = status.lastRun?.sources?.filter((s) => !s.ok) || [];
     pill.dataset.state = failed.length ? 'error' : 'live';
     text.textContent = failed.length
-      ? `${failed.length} source${failed.length === 1 ? '' : 's'} failing`
+      ? `${failed.length} source${failed.length === 1 ? '' : 's'} ghosting`
       : status.settings.autoFetch
-        ? 'Live'
-        : 'Manual only';
+        ? 'Lurking'
+        : 'On demand';
   }
 
   $('#fetchNow').disabled = status.running;
   $('#fetchNow').classList.toggle('spinning', status.running);
 
   $('#lastRunText').textContent = status.lastRun
-    ? `Last fetch ${relativeTime(status.lastRun.finishedAt)} · ${status.lastRun.added} new`
-    : 'No fetch yet';
+    ? `Last lurked ${relativeTime(status.lastRun.finishedAt)} · ${status.lastRun.added} new`
+    : 'Not lurked yet';
 
   $('#nextRunText').textContent = status.settings.autoFetch
     ? status.nextRunAt
-      ? `Next automatic fetch ${untilTime(status.nextRunAt)}`
+      ? `Next lurk ${untilTime(status.nextRunAt)}`
       : 'Scheduling…'
-    : 'Automatic fetching is off';
+    : 'Auto-lurking is off';
 
   renderSourceHealth(status.lastRun);
   renderErrorBanner(status.lastRun);
@@ -820,14 +820,14 @@ async function refreshStatusStatic() {
   const generatedAt = feed.generatedAt;
 
   $('#statusPill').dataset.state = 'live';
-  $('#statusText').textContent = `Updated ${relativeTime(generatedAt)}`;
+  $('#statusText').textContent = `Lurked ${relativeTime(generatedAt)}`;
   $('#fetchNow').disabled = false;
   $('#fetchNow').classList.remove('spinning');
-  $('#fetchNow').querySelector('span:not(.btn-icon)').textContent = 'Reload';
-  $('#fetchNow').title = 'Reload the feed. Scraping runs on a schedule in GitHub Actions.';
+  $('#fetchNow').querySelector('span:not(.btn-icon)').textContent = 'Lurk now';
+  $('#fetchNow').title = 'Re-check the published feed. The actual lurking runs on a schedule in GitHub Actions.';
 
-  $('#lastRunText').textContent = `Last scrape ${relativeTime(generatedAt)}`;
-  $('#nextRunText').textContent = 'Scheduled by GitHub Actions';
+  $('#lastRunText').textContent = `Last lurked ${relativeTime(generatedAt)}`;
+  $('#nextRunText').textContent = 'Lurking on a schedule · GitHub Actions';
 
   $('#errorBanner').hidden = true;
   const health = $('#sourceHealth');
@@ -856,8 +856,8 @@ async function fetchNow() {
       await refreshStatus();
       toast(
         staticCache.generatedAt === before
-          ? 'Already showing the latest scrape.'
-          : 'Feed reloaded.',
+          ? 'Already on the latest lurk.'
+          : 'Caught up.',
         'good'
       );
     } catch (err) {
@@ -872,7 +872,7 @@ async function fetchNow() {
   btn.disabled = true;
   btn.classList.add('spinning');
   $('#statusPill').dataset.state = 'busy';
-  $('#statusText').textContent = 'Fetching…';
+  $('#statusText').textContent = 'Lurking…';
   try {
     const result = await api('/api/fetch', { method: 'POST' });
     // The SSE 'notices' event also fires; reloading here keeps the manual path
@@ -883,8 +883,8 @@ async function fetchNow() {
     await refreshStatus();
     toast(
       result.added
-        ? `${result.added} new notice${result.added === 1 ? '' : 's'} found.`
-        : 'No new notices — everything is already up to date.',
+        ? `${result.added} fresh drop${result.added === 1 ? '' : 's'}.`
+        : 'Nothing new. The boards are asleep.',
       result.added ? 'good' : ''
     );
   } catch (err) {
@@ -940,7 +940,7 @@ async function shareNotice(id) {
 
   const text = `${notice.title}\n${notice.url}`;
   if (await copyText(text)) {
-    toast('Link copied.', 'good');
+    toast('Yoinked. Link copied.', 'good');
   } else {
     // Opening the document would be a surprising answer to "share", so say
     // what happened instead and leave the link selectable in the card.
@@ -1043,18 +1043,18 @@ async function syncPushButton() {
   if (STATIC) {
     if (!pushSupported()) {
       btn.disabled = true;
-      label.textContent = 'Popups not supported';
+      label.textContent = 'No pings here';
       hint.textContent =
-        'This browser cannot show notifications. You still get an email for every new notice.';
+        'This browser cannot do notifications. You still get an email for every drop.';
       return;
     }
     btn.disabled = false;
     const on = Boolean(await currentSubscription());
-    label.textContent = on ? 'Popup alerts are set up' : 'Turn on popup alerts';
+    label.textContent = on ? 'Pings are on' : 'Get pinged';
     hint.innerHTML = on
-      ? 'This device is registered. Open this again to re-copy the values for your repository.'
-      : 'Get a popup on this device the moment a notice appears — like a calendar reminder. ' +
-        'Free; one short setup.';
+      ? 'This device is on the list. Open this again to re-copy the values for your repo.'
+      : 'Get pinged on this device the second a notice drops — like a calendar reminder, ' +
+        'except it is your result. Free; one short setup.';
     return;
   }
 
@@ -1205,7 +1205,7 @@ function setupInstall() {
     installPrompt = null;
     group.hidden = true;
     renumber(false);
-    if (outcome === 'accepted') toast('Installed.', 'good');
+    if (outcome === 'accepted') toast('Installed. Now it lurks from your home screen.', 'good');
   });
 
   window.addEventListener('appinstalled', () => {
@@ -1533,7 +1533,7 @@ async function copySecret(id) {
   const node = document.getElementById(id);
   const text = node?.textContent || '';
   if (await copyText(text)) {
-    toast('Copied.', 'good');
+    toast('Yoinked.', 'good');
     return;
   }
   // Last resort: select it so the user can copy by hand.

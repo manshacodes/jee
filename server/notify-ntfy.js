@@ -44,8 +44,8 @@ export async function notifyNtfy(notices, { siteUrl } = {}) {
 
   const title =
     notices.length === 1
-      ? `New ${notices[0].categories.filter((c) => c !== 'other').join('/') || 'exam'} notice`
-      : `${notices.length} new exam notices`;
+      ? `${notices[0].categories.filter((c) => c !== 'other').join('/') || 'Exam'} just dropped`
+      : `${notices.length} new drops`;
 
   // Body carries the detail; keep it readable on a lock screen.
   const body = notices

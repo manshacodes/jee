@@ -29,8 +29,8 @@ function summarise(notices) {
     .map((c) => CATEGORY_LABELS[c] || c);
   const what = streams.length ? streams.join(', ') : 'exam';
   return notices.length === 1
-    ? `New ${what} notice: ${notices[0].title}`
-    : `${notices.length} new ${what} notices`;
+    ? `${what} just dropped: ${notices[0].title}`
+    : `${notices.length} ${what} drops`;
 }
 
 function body(notices, { siteUrl } = {}) {
@@ -49,14 +49,14 @@ function body(notices, { siteUrl } = {}) {
 
   const head =
     notices.length === 1
-      ? 'One new notice was published:'
-      : `${notices.length} new notices were published:`;
+      ? 'One thing just dropped:'
+      : `${notices.length} things just dropped:`;
 
   // Blank lines are load-bearing: a `---` directly under text is a Markdown
   // setext heading, which would turn the last notice into an <h2>.
   const footer = [
-    siteUrl ? `[Open the full feed](${siteUrl})` : null,
-    '<sub>Posted automatically by the scheduled scrape. Close this issue once you have read it.</sub>',
+    siteUrl ? `[Go lurk the full feed](${siteUrl})` : null,
+    '<sub>Posted automatically by the scheduled lurk. Close this issue once you have read it.</sub>',
   ].filter((line) => line !== null);
 
   return [head, '', ...lines, '', '---', '', ...footer].join('\n');

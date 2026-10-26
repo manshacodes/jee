@@ -67,7 +67,11 @@ test('opens an issue on the repo with the token Actions provides', async () => {
 });
 
 test('a single notice names itself in the issue title', () => {
-  assert.match(helpers.summarise([notice()]), /^New JEE notice: JEE \(Main\) 2027/);
+  // Assert the parts that have to be there -- the stream and the headline --
+  // rather than the exact wording, which is copy and will change.
+  const title = helpers.summarise([notice()]);
+  assert.match(title, /JEE/);
+  assert.match(title, /JEE \(Main\) 2027 Session 1 application form/);
 });
 
 test('a batch is summarised by stream', () => {
@@ -75,11 +79,13 @@ test('a batch is summarised by stream', () => {
     notice({ categories: ['jee'] }),
     notice({ categories: ['class10', 'class12'] }),
   ]);
-  assert.match(title, /^2 new JEE, Class 10, Class 12 notices$/);
+  assert.match(title, /\b2\b/);
+  for (const stream of ['JEE', 'Class 10', 'Class 12']) assert.match(title, new RegExp(stream));
 });
 
 test('"other" is not treated as a stream name', () => {
-  assert.match(helpers.summarise([notice({ categories: ['other'] })]), /^New exam notice/);
+  const title = helpers.summarise([notice({ categories: ['other'] })]);
+  assert.ok(!/other/i.test(title), '"other" leaked into the title as a stream name');
 });
 
 test('the body links every notice and the site', () => {
@@ -88,7 +94,7 @@ test('the body links every notice and the site', () => {
   });
   assert.match(text, /\[JEE \(Main\) 2027 Session 1 application form\]\(https:\/\/jeemain\.nta\.nic\.in\/a\.pdf\)/);
   assert.match(text, /\[Second\]\(https:\/\/x\/b\.pdf\)/);
-  assert.match(text, /\[Open the full feed\]\(https:\/\/me\.github\.io\/jee\/\)/);
+  assert.match(text, /\]\(https:\/\/me\.github\.io\/jee\/\)/);
   assert.match(text, /2026-10-24/);
 });
 

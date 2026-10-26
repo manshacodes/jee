@@ -101,7 +101,7 @@ test('a single notice shows its own title and opens the document', async () => {
   process.env.PUSH_SUBSCRIPTIONS = JSON.stringify([fakeSubscription('a')]);
   await notifyWebPush([notice()], { siteUrl: 'https://me.github.io/jee/' });
   const payload = JSON.parse(sends[0].payload);
-  assert.match(payload.title, /New JEE notice/);
+  assert.match(payload.title, /JEE/);
   assert.match(payload.body, /JEE \(Main\) 2027/);
   assert.equal(payload.url, 'https://jeemain.nta.nic.in/a.pdf');
 });
@@ -113,7 +113,10 @@ test('a batch is summarised and opens the site', async () => {
     { siteUrl: 'https://me.github.io/jee/' }
   );
   const payload = JSON.parse(sends[0].payload);
-  assert.match(payload.title, /3 new JEE, Class 10, Class 12 notices/);
+  assert.match(payload.title, /\b3\b/);
+  for (const stream of ['JEE', 'Class 10', 'Class 12']) {
+    assert.match(payload.title, new RegExp(stream));
+  }
   assert.equal(payload.url, 'https://me.github.io/jee/');
   assert.equal(payload.count, 3);
 });
