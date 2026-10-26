@@ -76,7 +76,7 @@ test('the right credentials get through', async () => {
 
   const page = await fetch(`${origin}/`, { headers: { Authorization: good } });
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /Exam Notice Radar/);
+  assert.match(await page.text(), /lurk :p/);
 });
 
 test('a wrong password, user or malformed header is rejected', async () => {

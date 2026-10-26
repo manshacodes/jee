@@ -1,8 +1,8 @@
 {
-  "name": "exam-notice-radar",
+  "name": "lurk",
   "version": "1.0.0",
   "private": true,
-  "description": "Live notification aggregator for CBSE and NTA (JEE, NEET UG, Class 10 & 12 boards)",
+  "description": "Lurk — watches the CBSE and NTA notice boards so you do not have to",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

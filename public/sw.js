@@ -13,15 +13,15 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: 'Exam Notice Radar', body: event.data?.text() || 'New notice published' };
+    payload = { title: 'lurk :p', body: event.data?.text() || 'New notice published' };
   }
 
-  const title = payload.title || 'Exam Notice Radar';
+  const title = payload.title || 'lurk :p';
   const options = {
     body: payload.body || 'A new notice has been published.',
     // One tag means a burst of notices collapses into a single alert rather
     // than stacking a dozen of them on the lock screen.
-    tag: payload.tag || 'exam-notice-radar',
+    tag: payload.tag || 'lurk',
     renotify: true,
     icon: '/icons/icon-192.png',
     badge: '/icons/badge.png',

@@ -197,6 +197,6 @@ test('the single-page app is served at the root', async () => {
   const res = await fetch(`${origin}/`);
   assert.equal(res.status, 200);
   const html = await res.text();
-  assert.match(html, /Exam Notice Radar/);
+  assert.match(html, /lurk :p/);
   assert.match(html, /id="categoryNav"/);
 });

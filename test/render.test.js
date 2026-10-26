@@ -185,9 +185,9 @@ test('the tab title shows an unread count only when there is one', async () => {
   const updateTabTitle = fn(doc);
 
   updateTabTitle(3);
-  assert.equal(doc.title, '(3) Exam Notice Radar');
+  assert.equal(doc.title, '(3) lurk :p');
   updateTabTitle(0);
-  assert.equal(doc.title, 'Exam Notice Radar');
+  assert.equal(doc.title, 'lurk :p');
 });
 
 test('the "since your last visit" label stays readable at any age', async () => {

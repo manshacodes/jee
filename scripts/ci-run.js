@@ -32,7 +32,7 @@ if (process.env.TEST_ALERT === 'true') {
     {
       title: 'Test alert — your notifications are working',
       url: SITE_URL || 'https://github.com',
-      sourceLabel: 'Exam Notice Radar',
+      sourceLabel: 'Lurk',
       categories: ['other'],
       publishedAt: null,
       dateInferred: false,

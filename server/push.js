@@ -61,9 +61,9 @@ export async function broadcastNewNotices(notices) {
       : `${relevant.length} new notices from CBSE / NTA`;
 
   const payload = JSON.stringify({
-    title: relevant.length === 1 ? `New: ${relevant[0].sourceLabel}` : 'Exam Notice Radar',
+    title: relevant.length === 1 ? `New: ${relevant[0].sourceLabel}` : 'lurk :p',
     body: headline.slice(0, 240),
-    tag: 'exam-notice-radar',
+    tag: 'lurk',
     url: relevant.length === 1 ? relevant[0].url : '/',
     count: relevant.length,
     categories: [...new Set(relevant.flatMap((n) => n.categories))],

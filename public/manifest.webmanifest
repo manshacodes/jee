@@ -1,12 +1,12 @@
 {
-  "name": "Exam Notice Radar",
-  "short_name": "Notice Radar",
-  "description": "Live CBSE and NTA notifications for JEE, NEET UG and the Class 10 and 12 board exams.",
+  "name": "lurk :p",
+  "short_name": "lurk :p",
+  "description": "Watches the CBSE and NTA notice boards and tells you the moment something lands.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#2f5fe0",
+  "background_color": "#080808",
+  "theme_color": "#080808",
   "icons": [
     { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },

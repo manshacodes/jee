@@ -1,4 +1,6 @@
-# Exam Notice Radar
+# lurk :p
+
+Lurks on the CBSE and NTA notice boards so you do not have to.
 
 A self-hosted web app that watches the CBSE and NTA notice boards and shows
 their notifications in one feed, auto-sorted into **JEE**, **NEET UG**,
@@ -292,13 +294,13 @@ under Environment. Paste the VAPID keys there too.
 ### Any Docker host
 
 ```bash
-docker build -t exam-notice-radar .
+docker build -t lurk .
 docker run -d -p 3000:3000 \
   -v exam-notice-data:/app/data \
   -e APP_PASSWORD='pick-something-long' \
   -e VAPID_PUBLIC_KEY='...' -e VAPID_PRIVATE_KEY='...' \
   -e VAPID_SUBJECT='mailto:you@example.com' \
-  exam-notice-radar
+  lurk
 ```
 
 Serve it over **HTTPS**. Browsers refuse Web Push on plain HTTP (localhost is

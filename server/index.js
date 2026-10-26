@@ -246,7 +246,7 @@ async function main() {
   warnIfOpen();
   await initPush();
   const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[server] Exam Notice Radar listening on http://localhost:${PORT}`);
+    console.log(`[server] lurk :p listening on http://localhost:${PORT}`);
   });
 
   // Seed the store on a cold start so the UI is never empty, then arm the timer.

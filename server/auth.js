@@ -53,7 +53,7 @@ export function requireAuth(req, res, next) {
     }
   }
 
-  res.set('WWW-Authenticate', 'Basic realm="Exam Notice Radar", charset="UTF-8"');
+  res.set('WWW-Authenticate', 'Basic realm="lurk :p", charset="UTF-8"');
   return res.status(401).type('text/plain').send('Authentication required.');
 }
 

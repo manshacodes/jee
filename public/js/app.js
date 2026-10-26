@@ -1,5 +1,5 @@
 /**
- * Exam Notice Radar -- front end.
+ * Lurk -- front end.
  *
  * Keeps the feed in sync three ways: a full load on start / filter change, a
  * server-sent-events stream for notices discovered while the tab is open, and
@@ -350,7 +350,7 @@ function shortWhen(iso) {
  * something arrived.
  */
 function updateTabTitle(unread) {
-  document.title = unread > 0 ? `(${unread}) Exam Notice Radar` : 'Exam Notice Radar';
+  document.title = unread > 0 ? `(${unread}) lurk :p` : 'lurk :p';
 }
 
 /**
@@ -1314,7 +1314,7 @@ async function sendLocalTestPopup() {
 
     await registration.showNotification('Test popup — notifications are working', {
       body: 'This is what a new CBSE or NTA notice will look like.',
-      tag: 'exam-notice-radar-test',
+      tag: 'lurk-test',
       icon: './icons/icon-192.png',
       badge: './icons/badge.png',
       data: { url: window.location.href },

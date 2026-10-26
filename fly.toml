@@ -10,7 +10,7 @@
 # Fly is the better free-tier choice here: min_machines_running = 1 keeps the
 # scheduler awake, which Render's free plan does not.
 
-app = "exam-notice-radar"
+app = "lurk"
 primary_region = "bom" # Mumbai -- closest to the CBSE/NTA origins
 
 [build]

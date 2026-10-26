@@ -55,7 +55,7 @@ function buildPayload(notices, siteUrl) {
             .map((n) => n.title)
             .join('\n')
             .slice(0, 240),
-    tag: 'exam-notice-radar',
+    tag: 'lurk',
     url: notices.length === 1 ? notices[0].url : siteUrl || '/',
     count: notices.length,
   });

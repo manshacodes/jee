@@ -244,11 +244,25 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
 .brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .brand-text strong {
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 400;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
-  line-height: 1.1;
+  letter-spacing: 0.01em;
+  /* Lowercase on purpose: the ":p" only reads as a face in lower case, and
+     "LURK :P" loses the joke entirely. */
+  text-transform: lowercase;
+  line-height: 1.05;
+}
+
+/* The emoticon sits in mono and slightly lighter, so it reads as a wink
+   rather than as part of the word. */
+.brand-text .tongue {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0;
+  opacity: 0.75;
+  /* Exempt from the metal fill, which would make it hard to read this small. */
+  -webkit-text-fill-color: var(--text-dim);
+  color: var(--text-dim);
 }
 .brand-text small {
   font-family: var(--font-mono);
