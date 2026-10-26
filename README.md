@@ -6,6 +6,9 @@ A self-hosted web app that watches the CBSE and NTA notice boards and shows
 their notifications in one feed, auto-sorted into **JEE**, **NEET UG**,
 **Class 10** and **Class 12**.
 
+- An overview on the unfiltered view: what is being tracked, what is unread,
+  when it last checked, which sources are healthy, and the newest notice in
+  each stream.
 - Scrapes on a schedule you control, plus a manual **Fetch now** button.
 - Auto-categorises each notice from its title, with a sidebar for focusing on
   one stream.
@@ -29,7 +32,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 162 unit/integration tests
+npm test            # 164 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -378,7 +381,7 @@ server/
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
   js/push-setup.js  browser-side VAPID generation and device subscription
-test/               162 tests, parsers included (served from HTTP fixtures)
+test/               164 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

@@ -489,6 +489,89 @@ function renderFeed() {
     bits.push(state.meta.sources.find((s) => s.id === state.source)?.label || state.source);
   }
   $('#feedSub').textContent = bits.join(' · ');
+  renderDashboard();
+}
+
+/**
+ * The overview, shown only on the unfiltered view so it reads as a homepage
+ * rather than as clutter above every filtered list.
+ *
+ * "Latest per stream" is taken from the notices currently loaded. In the
+ * static build that is the whole feed; against the server it is the newest
+ * page, so a stream with nothing recent says so rather than inventing one.
+ */
+function renderDashboard() {
+  const dash = $('#dashboard');
+  if (!dash) return;
+
+  const isHome =
+    state.category === 'all' && state.source === 'all' && !state.query && !state.onlyNew;
+  dash.hidden = !isHome;
+  if (!isHome) return;
+
+  const pool = STATIC && staticCache ? markUnread(staticCache.notices) : state.notices;
+  const counts = state.counts || {};
+  const generatedAt = STATIC ? staticCache?.generatedAt : getLastRunFinished();
+  const failing = (lastSourceReport() || []).filter((src) => !src.ok).length;
+  const sourceTotal = state.meta.sources.length;
+
+  const stats = [
+    { label: 'Tracking', value: counts.all ?? 0, unit: 'notices' },
+    { label: 'Unread', value: counts.new ?? 0, unit: counts.new === 1 ? 'notice' : 'notices', hot: (counts.new ?? 0) > 0 },
+    { label: 'Last check', value: generatedAt ? relativeTime(generatedAt) : '—', unit: '' },
+    {
+      label: 'Sources',
+      value: `${sourceTotal - failing}/${sourceTotal}`,
+      unit: failing ? 'one failing' : 'healthy',
+      warn: failing > 0,
+    },
+  ];
+
+  $('#dashStats').innerHTML = stats
+    .map(
+      (s) => `
+      <div class="stat ${s.hot ? 'hot' : ''} ${s.warn ? 'warn' : ''}">
+        <span class="stat-label">${escapeHtml(s.label)}</span>
+        <span class="stat-value">${escapeHtml(String(s.value))}</span>
+        ${s.unit ? `<span class="stat-unit">${escapeHtml(s.unit)}</span>` : ''}
+      </div>`
+    )
+    .join('');
+
+  $('#dashCards').innerHTML = state.meta.categories
+    .filter((c) => c.id !== 'other')
+    .map((c) => {
+      const latest = pool.find((n) => n.categories.includes(c.id));
+      const unread = counts[`${c.id}:new`] ?? 0;
+      return `
+        <button class="dash-card" data-category="${escapeHtml(c.id)}" data-cat="${escapeHtml(c.id)}">
+          <span class="dash-card-head">
+            <span class="tag" data-cat="${escapeHtml(c.id)}">${escapeHtml(c.icon)}</span>
+            <span class="dash-card-name">${escapeHtml(c.label)}</span>
+            ${unread ? `<span class="pip">${unread}</span>` : `<span class="count">${counts[c.id] ?? 0}</span>`}
+          </span>
+          <span class="dash-card-latest">${
+            latest ? highlight(latest.title, '') : 'Nothing recent'
+          }</span>
+          <span class="dash-card-when">${
+            latest
+              ? escapeHtml(
+                  (latest.dateInferred ? 'around ' : '') +
+                    (formatDate(latest.publishedAt) || relativeTime(latest.firstSeenAt))
+                )
+              : '—'
+          }</span>
+        </button>`;
+    })
+    .join('');
+}
+
+/** Last run time, whichever mode we are in. */
+function getLastRunFinished() {
+  return lastStatus?.lastRun?.finishedAt || null;
+}
+function lastSourceReport() {
+  return STATIC ? staticCache?.meta?.sources?.map((s) => ({ ...s, ok: true })) : lastStatus?.lastRun?.sources;
 }
 
 function renderPendingBanner() {
@@ -718,9 +801,13 @@ async function loadNoticesStatic({ append = false, force = false } = {}) {
   renderSidebar();
 }
 
+/** The most recent /api/status payload, reused by the overview. */
+let lastStatus = null;
+
 async function refreshStatus() {
   if (STATIC) return refreshStatusStatic();
   const status = await api('/api/status');
+  lastStatus = status;
   state.settings = status.settings;
   state.counts = status.counts;
   renderStatus(status);
@@ -1615,6 +1702,15 @@ function wireEvents() {
     if (!btn) return;
     applyTheme(btn.dataset.theme);
     saveSettings({ theme: btn.dataset.theme });
+  });
+
+  $('#dashCards')?.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-category]');
+    if (!card) return;
+    state.category = card.dataset.category;
+    state.pending = [];
+    renderPendingBanner();
+    withTransition(() => loadNotices().catch((err) => toast(err.message, 'bad')));
   });
 
   $('#categoryNav').addEventListener('click', (e) => {

@@ -72,3 +72,21 @@ test('layering goes through the scale, not scattered magic numbers', () => {
   // Only the two tiny in-card values are allowed to be literal.
   assert.deepEqual(strays.sort((a, b) => a - b), [1, 2], `unexpected literal z-index values: ${strays}`);
 });
+
+test('the overview only claims a stream has a notice when one is loaded', async () => {
+  const src = await readFile(join(HERE, '..', 'public', 'js', 'app.js'), 'utf8');
+  const from = src.indexOf('function renderDashboard(');
+  const body = src.slice(from, src.indexOf('\n}', from));
+  // A stream with nothing in the loaded page must say so rather than show a
+  // stale or unrelated notice.
+  assert.match(body, /Nothing recent/);
+  // And it must only render on the unfiltered view.
+  assert.match(body, /state\.category === 'all' && state\.source === 'all' && !state\.query && !state\.onlyNew/);
+});
+
+test('the overview grid collapses rather than overflowing on a phone', () => {
+  const small = css.slice(css.indexOf('@media (max-width: 540px)'));
+  assert.match(small, /\.dash-cards\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  const mid = css.slice(css.indexOf('@media (max-width: 920px)'));
+  assert.match(mid, /\.dash-stats\s*\{\s*grid-template-columns:\s*repeat\(2/);
+});
