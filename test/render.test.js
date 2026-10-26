@@ -148,3 +148,54 @@ test('date group labels are relative near today and absolute further back', asyn
   assert.equal(fn(null), 'Undated');
   assert.equal(fn('not a date'), 'Undated');
 });
+
+test('a card offers a star, reflecting its saved state', async () => {
+  const { noticeCard } = await loadRenderer();
+  const off = noticeCard(notice({ starred: false }));
+  assert.match(off, /data-star="abc123"/);
+  assert.match(off, /aria-pressed="false"/);
+  assert.match(off, /aria-label="Save this notice"/);
+
+  const on = noticeCard(notice({ starred: true }));
+  assert.match(on, /aria-pressed="true"/);
+  assert.match(on, /class="star on"/);
+  assert.match(on, /aria-label="Remove from saved"/);
+});
+
+test('the star carries the notice id, escaped', async () => {
+  const { noticeCard } = await loadRenderer();
+  // Ids are generated hashes, but the attribute is escaped regardless.
+  const html = noticeCard(notice({ id: 'a"b<c' }));
+  assert.ok(!html.includes('data-star="a"b'), 'the id broke out of its attribute');
+  assert.match(html, /data-star="a&quot;b&lt;c"/);
+});
+
+test('the tab title shows an unread count only when there is one', async () => {
+  const src = await readFile(join(HERE, '..', 'public', 'js', 'app.js'), 'utf8');
+  const from = src.indexOf('function updateTabTitle(');
+  const fn = new Function(
+    'document',
+    `${src.slice(from, src.indexOf('\n}', from) + 2)}; return updateTabTitle;`
+  );
+  const doc = { title: '' };
+  const updateTabTitle = fn(doc);
+
+  updateTabTitle(3);
+  assert.equal(doc.title, '(3) Exam Notice Radar');
+  updateTabTitle(0);
+  assert.equal(doc.title, 'Exam Notice Radar');
+});
+
+test('the "since your last visit" label stays readable at any age', async () => {
+  const src = await readFile(join(HERE, '..', 'public', 'js', 'app.js'), 'utf8');
+  const from = src.indexOf('function shortWhen(');
+  const shortWhen = new Function(`${src.slice(from, src.indexOf('\n}', from) + 2)}; return shortWhen;`)();
+
+  const day = 86400000;
+  const ago = (ms) => new Date(Date.now() - ms).toISOString();
+  assert.equal(shortWhen(ago(3600000)), 'earlier today');
+  assert.equal(shortWhen(ago(1.2 * day)), 'yesterday');
+  assert.match(shortWhen(ago(3 * day)), /^[A-Z][a-z]+day$/);
+  assert.match(shortWhen(ago(30 * day)), /\d/);
+  assert.equal(shortWhen('nonsense'), 'your last visit');
+});

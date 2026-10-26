@@ -203,6 +203,7 @@ function renderSidebar() {
   const items = [
     { id: 'all', label: 'All notifications', icon: '∗', blurb: 'Every source' },
     ...state.meta.categories,
+    { id: 'saved', label: 'Saved', icon: '★', blurb: 'Notices you starred on this device' },
   ];
 
   $('#categoryNav').innerHTML = items
@@ -268,6 +269,17 @@ function noticeCard(n, justIn = false) {
       <div class="notice-side">
         <span class="count">${n.dateInferred ? '~' : ''}${relativeTime(n.publishedAt || n.firstSeenAt)}</span>
       </div>
+      <button
+        class="star ${n.starred ? 'on' : ''}"
+        data-star="${escapeHtml(n.id)}"
+        aria-pressed="${n.starred ? 'true' : 'false'}"
+        aria-label="${n.starred ? 'Remove from saved' : 'Save this notice'}"
+        title="${n.starred ? 'Saved' : 'Save'}"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.7l5.8-.8z" />
+        </svg>
+      </button>
     </li>`;
 }
 
@@ -310,6 +322,25 @@ function dateGroupLabel(iso) {
   return then.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
+/** "your last visit" rendered compactly: a weekday nearby, a date further out. */
+function shortWhen(iso) {
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return 'your last visit';
+  const days = (Date.now() - then) / 86400000;
+  if (days < 1) return 'earlier today';
+  if (days < 2) return 'yesterday';
+  if (days < 7) return new Date(then).toLocaleDateString(undefined, { weekday: 'long' });
+  return new Date(then).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+/**
+ * Unread count in the tab title, so an open-but-background tab still tells you
+ * something arrived.
+ */
+function updateTabTitle(unread) {
+  document.title = unread > 0 ? `(${unread}) Exam Notice Radar` : 'Exam Notice Radar';
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
@@ -317,23 +348,39 @@ function escapeHtml(s) {
 function renderFeed() {
   const list = $('#noticeList');
 
+  // How many of the notices on screen arrived since this device last loaded
+  // the page. Used to draw a single "you were here" line.
+  const sinceCount = previousVisit
+    ? state.notices.filter((n) => (n.firstSeenAt || '') > previousVisit).length
+    : 0;
+  let markerDrawn = sinceCount === 0 || sinceCount === state.notices.length;
+
   // Group headings are emitted inline rather than as nested lists, so the flat
   // <li> structure the rest of the code relies on is unchanged.
   let lastGroup = null;
   list.innerHTML = state.notices
-    .map((n) => {
+    .map((n, index) => {
+      let marker = '';
+      if (!markerDrawn && index === sinceCount) {
+        markerDrawn = true;
+        marker =
+          `<li class="since-marker"><span>${sinceCount} new since ` +
+          `${escapeHtml(shortWhen(previousVisit))}</span></li>`;
+      }
       const group = dateGroupLabel(n.publishedAt || n.firstSeenAt);
       const heading =
         group === lastGroup ? '' : `<li class="date-label" aria-hidden="true">${escapeHtml(group)}</li>`;
       lastGroup = group;
-      return heading + noticeCard(n);
+      return marker + heading + noticeCard(n);
     })
     .join('');
 
   const empty = state.notices.length === 0;
   $('#emptyState').hidden = !empty;
   if (empty) {
-    $('#emptyText').textContent = state.query
+    $('#emptyText').textContent = state.category === 'saved'
+      ? 'Nothing saved yet. Tap the star on any notice to keep it here.'
+      : state.query
       ? `No notice title matches “${state.query}”.`
       : state.onlyNew
         ? 'No unread notices. New ones will appear here the moment they are published.'
@@ -342,7 +389,12 @@ function renderFeed() {
 
   $('#loadMore').hidden = state.notices.length >= state.total;
 
-  const scope = state.category === 'all' ? 'All notifications' : categoryLabel(state.category);
+  const scope =
+    state.category === 'all'
+      ? 'All notifications'
+      : state.category === 'saved'
+        ? 'Saved'
+        : categoryLabel(state.category);
   $('#feedTitle').textContent = scope;
 
   const sourceName =
@@ -534,7 +586,9 @@ async function loadNotices({ append = false, force = false } = {}) {
   if (STATIC) return loadNoticesStatic({ append, force });
 
   const params = new URLSearchParams({
-    category: state.category,
+    // "saved" is a per-device list the server knows nothing about, so ask for
+    // everything and narrow it here.
+    category: state.category === 'saved' ? 'all' : state.category,
     source: state.source,
     limit: String(append ? state.limit + PAGE : PAGE),
   });
@@ -543,9 +597,14 @@ async function loadNotices({ append = false, force = false } = {}) {
 
   const data = await api(`/api/notifications?${params}`);
   state.limit = append ? state.limit + PAGE : PAGE;
-  state.notices = data.notifications;
-  state.total = data.total;
-  state.counts = data.counts;
+
+  let list = data.notifications;
+  if (state.category === 'saved') list = list.filter((n) => starred.has(n.id));
+  state.notices = list.map((n) => ({ ...n, starred: starred.has(n.id) }));
+  state.total = state.category === 'saved' ? list.length : data.total;
+  state.counts = { ...data.counts, saved: starred.size };
+
+  updateTabTitle(state.counts.new);
   renderFeed();
   renderSidebar();
 }
@@ -556,7 +615,11 @@ async function loadNoticesStatic({ append = false, force = false } = {}) {
   const all = markUnread(feed.notices);
 
   const filtered = all.filter((n) => {
-    if (state.category !== 'all' && !n.categories.includes(state.category)) return false;
+    if (state.category === 'saved') {
+      if (!starred.has(n.id)) return false;
+    } else if (state.category !== 'all' && !n.categories.includes(state.category)) {
+      return false;
+    }
     if (state.source !== 'all' && n.sourceId !== state.source) return false;
     if (state.onlyNew && !n.isNew) return false;
     if (state.query && !n.title.toLowerCase().includes(state.query.toLowerCase())) return false;
@@ -564,7 +627,7 @@ async function loadNoticesStatic({ append = false, force = false } = {}) {
   });
 
   state.limit = append ? state.limit + PAGE : PAGE;
-  state.notices = filtered.slice(0, state.limit);
+  state.notices = filtered.slice(0, state.limit).map((n) => ({ ...n, starred: starred.has(n.id) }));
   state.total = filtered.length;
 
   const counts = { all: all.length, new: all.filter((n) => n.isNew).length };
@@ -573,8 +636,10 @@ async function loadNoticesStatic({ append = false, force = false } = {}) {
     counts[c.id] = bucket.length;
     counts[`${c.id}:new`] = bucket.filter((n) => n.isNew).length;
   }
+  counts.saved = all.filter((n) => starred.has(n.id)).length;
   state.counts = counts;
 
+  updateTabTitle(counts.new);
   renderFeed();
   renderSidebar();
 }
@@ -687,6 +752,29 @@ async function saveSettings(patch) {
     renderSettings();
     return null;
   }
+}
+
+function toggleStar(id, btn) {
+  const on = !starred.has(id);
+  if (on) starred.add(id);
+  else starred.delete(id);
+  persistStarred();
+
+  // Update in place rather than re-rendering: a full re-render would scroll
+  // the list out from under the click.
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', String(on));
+  btn.setAttribute('aria-label', on ? 'Remove from saved' : 'Save this notice');
+  btn.title = on ? 'Saved' : 'Save';
+
+  const notice = state.notices.find((n) => n.id === id);
+  if (notice) notice.starred = on;
+
+  state.counts = { ...state.counts, saved: starred.size };
+  renderSidebar();
+
+  // Unstarring from inside the Saved view should drop the card.
+  if (!on && state.category === 'saved') loadNotices().catch(() => {});
 }
 
 async function markAllRead() {
@@ -834,6 +922,45 @@ const SETUP_KEY = 'pushSetup';
 
 /** This device's subscription, kept so the merge box can recombine it. */
 let lastDeviceSubscription = null;
+
+/** Notices the user starred, per device. */
+const STARRED_KEY = 'starred';
+const starred = new Set(readStarred());
+
+/**
+ * When this device last loaded the page. Captured once at boot and then
+ * overwritten, so the feed can draw a line at "everything above this arrived
+ * since you were last here" for the whole session, even after the badges are
+ * cleared.
+ */
+const VISIT_KEY = 'lastVisitAt';
+let previousVisit = null;
+
+function readStarred() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STARRED_KEY) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistStarred() {
+  try {
+    localStorage.setItem(STARRED_KEY, JSON.stringify([...starred]));
+  } catch {
+    /* private mode: stars last for the session only */
+  }
+}
+
+function captureVisit() {
+  try {
+    previousVisit = localStorage.getItem(VISIT_KEY);
+    localStorage.setItem(VISIT_KEY, new Date().toISOString());
+  } catch {
+    previousVisit = null;
+  }
+}
 
 function readSetup() {
   try {
@@ -1229,6 +1356,15 @@ function wireEvents() {
     loadNotices().catch((err) => toast(err.message, 'bad'));
   });
 
+  $('#noticeList').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-star]');
+    if (!btn) return;
+    // The card is one big link; starring must not follow it.
+    e.preventDefault();
+    e.stopPropagation();
+    toggleStar(btn.dataset.star, btn);
+  });
+
   $('#markAllRead').addEventListener('click', markAllRead);
   $('#loadMore').addEventListener('click', () => loadNotices({ append: true }));
 
@@ -1335,6 +1471,7 @@ function closeSidebar() {
 // ---------------------------------------------------------------- boot
 
 async function main() {
+  captureVisit();
   wireEvents();
   showSkeletons();
 

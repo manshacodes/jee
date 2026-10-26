@@ -771,7 +771,15 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
   text-transform: uppercase;
 }
 
-.notice-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.notice-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex: none;
+  /* Clear the star, which is absolutely positioned in the same corner. */
+  padding-right: 26px;
+}
 .notice-side .count {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1192,6 +1200,10 @@ select:disabled, input:disabled, textarea:disabled { opacity: 0.55; cursor: not-
 }
 
 @media (max-width: 540px) {
+  /* The timestamp column is hidden here, so the title would otherwise run
+     under the star. */
+  .notice-body { padding-right: 24px; }
+
   .topbar { gap: 8px; padding: 0 12px; }
   .btn.primary span:not(.btn-icon) { display: none; }
   .btn.primary { width: 34px; padding: 0; }
@@ -1210,3 +1222,192 @@ select:disabled, input:disabled, textarea:disabled { opacity: 0.55; cursor: not-
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   Metallic treatment
+   Everything here is a gradient or a compositor-only transform. No filters,
+   no box-shadow animation, no per-frame JavaScript -- the effects are free at
+   runtime because the browser paints them once and reuses the layer.
+   ========================================================================== */
+
+:root {
+  /* Brushed steel, light mode: reads as engraved against a pale page. */
+  --metal: linear-gradient(
+    168deg,
+    #2b2f33 0%, #6a7176 18%, #1b1e21 34%,
+    #878f94 52%, #30353a 68%, #9aa2a7 84%, #23272b 100%
+  );
+  --metal-sheen: rgb(255 255 255 / 55%);
+}
+
+:root[data-theme='dark'] {
+  /* Polished chrome, dark mode: the reference site's wordmark treatment. */
+  --metal: linear-gradient(
+    168deg,
+    #ffffff 0%, #9fa8ad 16%, #e8edef 32%,
+    #6d777c 48%, #f4f7f8 64%, #848d92 82%, #dfe5e7 100%
+  );
+  --metal-sheen: rgb(255 255 255 / 22%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] {
+    --metal: linear-gradient(
+      168deg,
+      #ffffff 0%, #9fa8ad 16%, #e8edef 32%,
+      #6d777c 48%, #f4f7f8 64%, #848d92 82%, #dfe5e7 100%
+    );
+    --metal-sheen: rgb(255 255 255 / 22%);
+  }
+}
+
+/* Display type, filled with metal. background-clip is painted once; it costs
+   nothing to keep on screen. */
+.feed-head h1,
+.brand-text strong {
+  background: var(--metal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Safari needs a paint hint for clipped text inside a transformed ancestor. */
+@supports (-webkit-touch-callout: none) {
+  .feed-head h1, .brand-text strong { -webkit-transform: translateZ(0); }
+}
+
+.brand-mark {
+  position: relative;
+  overflow: hidden;
+}
+/* A single diagonal highlight, static. */
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgb(255 255 255 / 60%) 0%, transparent 45%);
+  pointer-events: none;
+}
+
+/*
+ * Hover sheen on a card: a wide, soft highlight swept across with a transform.
+ * Transforms are composited, so this runs on the GPU and never repaints the
+ * card's text.
+ */
+.notice::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 55%;
+  background: linear-gradient(100deg, transparent, var(--metal-sheen), transparent);
+  opacity: 0;
+  transform: translate3d(-120%, 0, 0);
+  pointer-events: none;
+}
+.notice:hover::after {
+  opacity: 1;
+  transform: translate3d(320%, 0, 0);
+  transition: transform 0.85s var(--ease), opacity 0.2s linear;
+}
+
+/* The primary button gets the same sweep, so the two read as one material. */
+.btn.primary { position: relative; overflow: hidden; }
+.btn.primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 28%), transparent);
+  transform: translate3d(-160%, 0, 0);
+  pointer-events: none;
+}
+.btn.primary:hover::after {
+  transform: translate3d(360%, 0, 0);
+  transition: transform 0.7s var(--ease);
+}
+
+/*
+ * Film grain. One small tiled SVG, painted once into its own fixed layer and
+ * never repainted or animated. It is what keeps large flat areas of near-black
+ * from banding.
+ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+:root[data-theme='dark'] body::after { opacity: 0.05; }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] body::after { opacity: 0.05; }
+}
+
+/* ========================================================== star */
+.star {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2; /* above the card-wide link overlay */
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease), color 0.15s var(--ease), transform 0.12s var(--ease);
+}
+.notice:hover .star,
+.star:focus-visible,
+.star.on { opacity: 1; }
+.star:hover { color: var(--text); background: var(--bg-sunk); }
+.star:active { transform: scale(0.88); }
+.star.on { color: #d8a33a; }
+.star.on svg { fill: #d8a33a; }
+
+/* Touch devices have no hover, so the star is always visible there. */
+@media (hover: none) {
+  .star { opacity: 1; }
+}
+
+/* ========================================================== since marker */
+.since-marker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+.since-marker::before,
+.since-marker::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--new), transparent);
+}
+.since-marker span {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--new);
+  white-space: nowrap;
+}
+
+/* The grain layer must not sit over modals. */
+.drawer, .setup, .scrim, .toast-stack { z-index: 10000; }
+.setup::backdrop { z-index: 9999; }
