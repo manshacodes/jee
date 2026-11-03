@@ -1,0 +1,17 @@
+name = "lurk-pinger"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Every 30 minutes. Unlike GitHub's own scheduler, Cloudflare keeps this.
+[triggers]
+crons = ["*/30 * * * *"]
+
+[vars]
+REPO = "manshacodes/jee"
+WORKFLOW = "scrape.yml"
+BRANCH = "claude/cbse-nta-notification-scraper-aj1xpy"
+
+# GITHUB_TOKEN and PING_KEY are secrets, not vars -- set them with
+#   npx wrangler secret put GITHUB_TOKEN
+#   npx wrangler secret put PING_KEY
+# so they are never written to this file or committed.

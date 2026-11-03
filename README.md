@@ -230,14 +230,20 @@ by default.
 
 **Do not read that as every 30 minutes.** GitHub deprioritises scheduled
 workflows on free public repositories and silently drops most firings. Measured
-over 25 hours on this repo: 6 scheduled runs delivered against 51 requested, so
-about 12% honoured, with gaps between 2.4 and 7.4 hours and an average of 4.2.
-Every run succeeded — they simply never started. Lowering the cron does not
-help, and raising it mostly generates firings that are dropped.
+over 80 hours on this repo: 14 scheduled runs delivered against 161 requested,
+about 9% honoured, gaps between 3.4 and 10.7 hours. Every run that started
+succeeded — the rest never started. Lowering the cron does not help, and
+raising it mostly generates firings that are dropped.
 
-If you need the schedule actually kept, that is the thing a paid always-on host
-buys you: the timer in `server/scheduler.js` fires exactly as configured. The
-free setup trades latency for costing nothing.
+**[`pinger/`](pinger/) fixes this**, free. Workflows started through the API
+are not throttled the same way — two dispatches on this repo both began in the
+same second they were queued — so a Cloudflare Worker keeps the schedule and
+tells GitHub to run. Setup is in [`pinger/README.md`](pinger/README.md); the
+cron stays in the workflow as a backstop.
+
+Without it, the schedule is whatever GitHub feels like. A paid always-on host
+is the other way to get a schedule actually kept: the timer in
+`server/scheduler.js` fires exactly as configured.
 
 **What the static build gives up.** With no server there is nothing to scrape
 on demand or re-schedule from the page, so those controls are visible but
@@ -373,6 +379,7 @@ scripts/
   ci-run.js         one scrape for Actions: commits state, alerts via ntfy
   build-static.js   bakes the feed into a static site for Pages
 vercel.json         builds and serves the static site on Vercel
+pinger/             Cloudflare Worker that keeps the schedule GitHub drops
 Dockerfile          production image; render.yaml / fly.toml are host blueprints
 server/
   index.js          Express app, REST API, SSE stream

@@ -8,6 +8,11 @@ data/
 # Built by scripts/build-static.js and published by the workflow; never committed.
 dist/
 
+# Cloudflare Worker build state. The Worker's secrets are set with
+# `wrangler secret put` and never live in the repo.
+pinger/.wrangler/
+pinger/node_modules/
+
 # NOTE: site-data/ is deliberately NOT ignored. It holds the feed the scheduled
 # GitHub Actions scrape commits, which is both the state for the next run and
 # the data the published site is built from.
