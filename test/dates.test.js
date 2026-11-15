@@ -67,3 +67,40 @@ test('a list with no dates at all is left undated', () => {
 test('an empty list is handled', () => {
   assert.deepEqual(inferMissingDates([]), []);
 });
+
+test('month-first dates parse, which is how jeeadv.ac.in stamps announcements', () => {
+  assert.equal(parseLooseDate('Posted on November 13, 2027, 17:00 IST'), '2027-11-13');
+  assert.equal(parseLooseDate('May 23, 2027'), '2027-05-23');
+  assert.equal(parseLooseDate('Jan 1, 2027'), '2027-01-01');
+  // Day-first still works, and neither form invents a date from nonsense.
+  assert.equal(parseLooseDate('13 November 2027'), '2027-11-13');
+  assert.equal(parseLooseDate('Posted on Smarch 40, 2027'), null);
+});
+
+test('a publication date in the future is treated as unknown', () => {
+  // jeeadv.ac.in stamps announcements with the exam-cycle year, not the year
+  // they were posted, which would otherwise pin them above everything.
+  const today = new Date('2026-11-15T00:00:00Z');
+  const items = [
+    { publishedAt: '2027-11-13' },
+    { publishedAt: '2026-11-10' },
+    { publishedAt: '2030-01-01' },
+  ];
+  inferMissingDates(items, { today });
+
+  // Both impossible dates are discarded and placed from their neighbours.
+  assert.equal(items[0].publishedAt, '2026-11-10');
+  assert.equal(items[0].dateInferred, true);
+  assert.equal(items[2].publishedAt, '2026-11-10');
+  // A real date is untouched.
+  assert.equal(items[1].publishedAt, '2026-11-10');
+  assert.equal(items[1].dateInferred, false);
+});
+
+test('today and yesterday are not mistaken for future dates', () => {
+  const today = new Date('2026-11-15T12:00:00Z');
+  const items = [{ publishedAt: '2026-11-15' }, { publishedAt: '2026-11-14' }];
+  inferMissingDates(items, { today });
+  assert.equal(items[0].publishedAt, '2026-11-15');
+  assert.equal(items[1].publishedAt, '2026-11-14');
+});

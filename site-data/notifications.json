@@ -1,6 +1,38 @@
 {
-  "updatedAt": "2026-11-15T07:40:09.230Z",
+  "updatedAt": "2026-11-15T15:14:58.088Z",
   "notices": [
+    {
+      "id": "fc1d8c1506f3ba69",
+      "title": "JEE (Advanced) 2027 will be held on May 23, 2027 (Sunday).",
+      "url": "https://jeeadv.ac.in/#announcements",
+      "sourceId": "jee-advanced",
+      "sourceLabel": "JEE (Advanced) — IITs",
+      "section": "Examination Date",
+      "categories": [
+        "jee"
+      ],
+      "publishedAt": null,
+      "dateInferred": false,
+      "firstSeenAt": "2026-11-15T15:12:48.463Z",
+      "lastSeenAt": "2026-11-15T15:12:48.463Z",
+      "isNew": true
+    },
+    {
+      "id": "1e1d7c1eb46735cd",
+      "title": "Link for Eligibility Criteria for appearing in JEE (Advanced) 2027.",
+      "url": "https://jeeadv.ac.in/eligibility.html",
+      "sourceId": "jee-advanced",
+      "sourceLabel": "JEE (Advanced) — IITs",
+      "section": "Eligibility Criteria",
+      "categories": [
+        "jee"
+      ],
+      "publishedAt": null,
+      "dateInferred": false,
+      "firstSeenAt": "2026-11-15T15:12:48.463Z",
+      "lastSeenAt": "2026-11-15T15:12:48.463Z",
+      "isNew": true
+    },
     {
       "id": "dc15f5a991ca39ce",
       "title": "Providing OSM Evaluation Data on IPS Spot Evaluation Portal 2026 and Enabling CNSs to Complete and Freeze IPS Data for Processing of Release of Payments",
@@ -183,86 +215,6 @@
       "isNew": true
     },
     {
-      "id": "d90079ae5666ed7f",
-      "title": "Press Release JEE (Main) - medium of question paper",
-      "url": "http://14.139.116.16:90/Download/Notice/Notice_20191107100148.pdf",
-      "sourceId": "nta-archive",
-      "sourceLabel": "NTA — Notice Board Archive",
-      "section": "Notice Board Archive",
-      "categories": [
-        "jee"
-      ],
-      "publishedAt": "2026-10-16",
-      "dateInferred": true,
-      "firstSeenAt": "2026-10-25T08:49:45.882Z",
-      "lastSeenAt": "2026-11-15T07:40:09.230Z",
-      "isNew": true
-    },
-    {
-      "id": "46708c855814d2fb",
-      "title": "PRESS RELEASE- Result of National Eligibility cum Entrance Test (UG) – 2020",
-      "url": "http://ntaresults.nic.in/NEET20/Result/ResultNEET.htm",
-      "sourceId": "nta-archive",
-      "sourceLabel": "NTA — Notice Board Archive",
-      "section": "Notice Board Archive",
-      "categories": [
-        "neet"
-      ],
-      "publishedAt": "2026-10-16",
-      "dateInferred": true,
-      "firstSeenAt": "2026-10-25T08:49:45.882Z",
-      "lastSeenAt": "2026-11-15T07:40:09.230Z",
-      "isNew": true
-    },
-    {
-      "id": "4dcade823f59fa12",
-      "title": "Public Notice Corrigendum to the Information Bulletin of UGC-NET December 2026 Examination",
-      "url": "http://cdnbbsr.s3waas.gov.in/s301eee509ee2f68dc6014898c309e86bf/uploads/2026/10/202610161905649093.pdf",
-      "sourceId": "nta-archive",
-      "sourceLabel": "NTA — Notice Board Archive",
-      "section": "Notice Board Archive",
-      "categories": [
-        "other"
-      ],
-      "publishedAt": "2026-10-16",
-      "dateInferred": false,
-      "firstSeenAt": "2026-10-25T08:49:45.882Z",
-      "lastSeenAt": "2026-11-15T07:40:09.230Z",
-      "isNew": true
-    },
-    {
-      "id": "f5016a79adda7f6a",
-      "title": "PUBLIC NOTICE National Eligibility-cum-Entrance Test (UG) – 2020",
-      "url": "http://14.139.116.16:90/Download/Notice/Notice_20191201165235.pdf",
-      "sourceId": "nta-archive",
-      "sourceLabel": "NTA — Notice Board Archive",
-      "section": "Notice Board Archive",
-      "categories": [
-        "other"
-      ],
-      "publishedAt": "2026-10-16",
-      "dateInferred": true,
-      "firstSeenAt": "2026-10-25T08:49:45.882Z",
-      "lastSeenAt": "2026-11-15T07:40:09.230Z",
-      "isNew": true
-    },
-    {
-      "id": "615475e0cff949e4",
-      "title": "Weeding out of waste paper (Confidential Records) of Examination",
-      "url": "http://https//nta.ac.in/Download/Tender/Tender_20240222112356.pdf",
-      "sourceId": "nta-archive",
-      "sourceLabel": "NTA — Notice Board Archive",
-      "section": "Notice Board Archive",
-      "categories": [
-        "other"
-      ],
-      "publishedAt": "2026-10-16",
-      "dateInferred": true,
-      "firstSeenAt": "2026-10-25T08:49:45.882Z",
-      "lastSeenAt": "2026-11-15T07:40:09.230Z",
-      "isNew": true
-    },
-    {
       "id": "e011d0c93165ddfc",
       "title": "Inviting Online Application form for the Joint Entrance Examination (JEE)-2027 (Session 1) – Reg.",
       "url": "https://cdnbbsr.s3waas.gov.in/s3f8e59f4b2fe7c5705bf878bbd494ccdf/uploads/2026/10/20261024390682350.pdf",
@@ -360,6 +312,86 @@
       "firstSeenAt": "2026-10-25T08:46:44.754Z",
       "lastSeenAt": "2026-11-15T07:40:09.230Z",
       "isNew": false
+    },
+    {
+      "id": "d90079ae5666ed7f",
+      "title": "Press Release JEE (Main) - medium of question paper",
+      "url": "http://14.139.116.16:90/Download/Notice/Notice_20191107100148.pdf",
+      "sourceId": "nta-archive",
+      "sourceLabel": "NTA — Notice Board Archive",
+      "section": "Notice Board Archive",
+      "categories": [
+        "jee"
+      ],
+      "publishedAt": "2026-10-16",
+      "dateInferred": true,
+      "firstSeenAt": "2026-10-25T08:49:45.882Z",
+      "lastSeenAt": "2026-11-15T07:40:09.230Z",
+      "isNew": true
+    },
+    {
+      "id": "46708c855814d2fb",
+      "title": "PRESS RELEASE- Result of National Eligibility cum Entrance Test (UG) – 2020",
+      "url": "http://ntaresults.nic.in/NEET20/Result/ResultNEET.htm",
+      "sourceId": "nta-archive",
+      "sourceLabel": "NTA — Notice Board Archive",
+      "section": "Notice Board Archive",
+      "categories": [
+        "neet"
+      ],
+      "publishedAt": "2026-10-16",
+      "dateInferred": true,
+      "firstSeenAt": "2026-10-25T08:49:45.882Z",
+      "lastSeenAt": "2026-11-15T07:40:09.230Z",
+      "isNew": true
+    },
+    {
+      "id": "4dcade823f59fa12",
+      "title": "Public Notice Corrigendum to the Information Bulletin of UGC-NET December 2026 Examination",
+      "url": "http://cdnbbsr.s3waas.gov.in/s301eee509ee2f68dc6014898c309e86bf/uploads/2026/10/202610161905649093.pdf",
+      "sourceId": "nta-archive",
+      "sourceLabel": "NTA — Notice Board Archive",
+      "section": "Notice Board Archive",
+      "categories": [
+        "other"
+      ],
+      "publishedAt": "2026-10-16",
+      "dateInferred": false,
+      "firstSeenAt": "2026-10-25T08:49:45.882Z",
+      "lastSeenAt": "2026-11-15T07:40:09.230Z",
+      "isNew": true
+    },
+    {
+      "id": "f5016a79adda7f6a",
+      "title": "PUBLIC NOTICE National Eligibility-cum-Entrance Test (UG) – 2020",
+      "url": "http://14.139.116.16:90/Download/Notice/Notice_20191201165235.pdf",
+      "sourceId": "nta-archive",
+      "sourceLabel": "NTA — Notice Board Archive",
+      "section": "Notice Board Archive",
+      "categories": [
+        "other"
+      ],
+      "publishedAt": "2026-10-16",
+      "dateInferred": true,
+      "firstSeenAt": "2026-10-25T08:49:45.882Z",
+      "lastSeenAt": "2026-11-15T07:40:09.230Z",
+      "isNew": true
+    },
+    {
+      "id": "615475e0cff949e4",
+      "title": "Weeding out of waste paper (Confidential Records) of Examination",
+      "url": "http://https//nta.ac.in/Download/Tender/Tender_20240222112356.pdf",
+      "sourceId": "nta-archive",
+      "sourceLabel": "NTA — Notice Board Archive",
+      "section": "Notice Board Archive",
+      "categories": [
+        "other"
+      ],
+      "publishedAt": "2026-10-16",
+      "dateInferred": true,
+      "firstSeenAt": "2026-10-25T08:49:45.882Z",
+      "lastSeenAt": "2026-11-15T07:40:09.230Z",
+      "isNew": true
     },
     {
       "id": "6ea91fbe08c77c14",

@@ -365,7 +365,10 @@ function dateGroupLabel(iso) {
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const days = Math.round((startOfDay(new Date()) - startOfDay(then)) / 86400000);
 
-  if (days <= 0) return 'Today';
+  // A date ahead of today is a board's mistake, not news: name the month
+  // rather than calling it "Today".
+  if (days < 0) return then.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';
   if (days < 7) return 'This week';
   if (days < 14) return 'Last week';

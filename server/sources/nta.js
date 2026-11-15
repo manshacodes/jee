@@ -65,17 +65,28 @@ export function parseLooseDate(text) {
     const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     return Number.isNaN(Date.parse(iso)) ? null : iso;
   }
+  const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const build = (year, monthName, day) => {
+    const mo = MONTHS.indexOf(monthName.toLowerCase().slice(0, 3)) + 1;
+    if (mo === 0) return null;
+    const iso = `${year}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return Number.isNaN(Date.parse(iso)) ? null : iso;
+  };
+
   // "24 October 2026" / "24th Oct, 2026"
-  const named =
+  const dayFirst =
     /(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*,?\s+(\d{4})/i.exec(
       text
     );
-  if (named) {
-    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    const mo = months.indexOf(named[2].toLowerCase()) + 1;
-    const iso = `${named[3]}-${String(mo).padStart(2, '0')}-${String(named[1]).padStart(2, '0')}`;
-    return Number.isNaN(Date.parse(iso)) ? null : iso;
-  }
+  if (dayFirst) return build(dayFirst[3], dayFirst[2], dayFirst[1]);
+
+  // "November 13, 2027" -- how jeeadv.ac.in stamps its announcements.
+  const monthFirst =
+    /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i.exec(
+      text
+    );
+  if (monthFirst) return build(monthFirst[3], monthFirst[1], monthFirst[2]);
+
   return null;
 }
 

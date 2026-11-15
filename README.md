@@ -32,7 +32,7 @@ marks them as already-read history, so you don't get a notification storm on
 day one. From then on, only genuinely new notices are flagged and pushed.
 
 ```bash
-npm test            # 169 unit/integration tests
+npm test            # 175 unit/integration tests
 npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 ```
 
@@ -41,17 +41,27 @@ npm run fetch:once  # one-shot scrape, useful from cron or to check the parsers
 | Source | Pages scraped |
 | --- | --- |
 | NTA — JEE (Main) | `jeemain.nta.nic.in` home ticker, `/public-notices/`, 2026 notices category |
+| JEE (Advanced) — IITs | `jeeadv.ac.in` home page announcements |
 | NTA — NEET (UG) | `neet.nta.nic.in` home ticker, `/public-notices/`, notices archive |
 | NTA — Notice Board Archive | `nta.ac.in/NoticeBoardArchive` |
 | CBSE | `cbse.gov.in/cbsenew/cbse.html` — the "Latest @ CBSE" list |
 
-All four are defined in [`server/sources/index.js`](server/sources/index.js);
+All five are defined in [`server/sources/index.js`](server/sources/index.js);
 add a page by appending to a source's `pages` array.
 
 The NTA portals all run the same S3WaaS government WordPress template, so one
 parser handles the three of them across its three layouts (`.gen-list`
 listings, the `.newsticker` marquee, and `table.doc-table` archives). CBSE has
 its own parser for its single hand-maintained list.
+
+JEE (Advanced) is run by the IITs rather than NTA and shares nothing with that
+template, so it has its own parser. Its announcements live on the home page —
+there is no archive, since the site is rebuilt each cycle — and each one's
+label ("Examination Date") becomes the section while the sentence below it
+becomes the title. Note that it stamps announcements with the **exam-cycle**
+year rather than the year they were posted, which reads as a publication date
+in the future; those are discarded and the notice is placed from its
+neighbours instead, or left undated.
 
 ### On the NTA archive
 
@@ -397,7 +407,7 @@ server/
   sources/          source registry + the two parsers
 public/             single-page UI, service worker, manifest, icons
   js/push-setup.js  browser-side VAPID generation and device subscription
-test/               169 tests, parsers included (served from HTTP fixtures)
+test/               175 tests, parsers included (served from HTTP fixtures)
 ```
 
 State is a handful of JSON files under `data/`, capped at 5000 notices. There

@@ -1,5 +1,6 @@
 import { scrapeNta } from './nta.js';
 import { scrapeCbse } from './cbse.js';
+import { scrapeJeeAdv } from './jeeadv.js';
 
 /**
  * Source registry. Pages are scraped in order and de-duplicated per source.
@@ -24,6 +25,15 @@ export const SOURCES = [
         hints: ['jee'],
       },
     ],
+  },
+  {
+    id: 'jee-advanced',
+    label: 'JEE (Advanced) — IITs',
+    homepage: 'https://jeeadv.ac.in/',
+    scraper: scrapeJeeAdv,
+    // Announcements live on the home page; the site carries no archive, so
+    // this is the whole of it.
+    pages: [{ url: 'https://jeeadv.ac.in/', section: 'Announcements', hints: ['jee'] }],
   },
   {
     id: 'nta-neet',

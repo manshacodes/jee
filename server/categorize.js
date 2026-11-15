@@ -20,7 +20,7 @@ export const CATEGORIES = [
     icon: 'JEE',
     // A bolt: engineering, and legible at 13px where a gear turns to mush.
     glyph: 'm13.5 3-7.5 10.5h5l-2.5 7.5 7.5-10.5h-5z',
-    blurb: 'JEE Main / Advanced, NTA',
+    blurb: 'JEE Main (NTA) and JEE Advanced (IITs)',
   },
   {
     id: 'neet',

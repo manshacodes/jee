@@ -9,6 +9,7 @@ import * as cheerio from 'cheerio';
  */
 import { scrapeCbse } from '../server/sources/cbse.js';
 import { scrapeNta } from '../server/sources/nta.js';
+import { scrapeJeeAdv } from '../server/sources/jeeadv.js';
 import { fixtureServer } from './helpers/fixture-server.js';
 
 const NTA_PAGE = `
@@ -228,6 +229,103 @@ test('CBSE parser also rejects dangerous schemes', async () => {
     assert.equal(items.length, 1);
     assert.equal(items[0].title, 'A genuine circular');
     assert.ok(items[0].url.startsWith('https://www.cbse.gov.in/'));
+  } finally {
+    await srv.close();
+  }
+});
+
+const JEEADV_PAGE = `
+<html><body>
+  <section id="announcements" class="announcements pb-3">
+    <h4 class="container-head-text">Important Announcements</h4>
+    <div class="ann-card display-6 fs-6 text-start mt-3">
+      <h4 class="announcement__head">Eligibility Criteria </h4>
+      <div class="announcement__text">
+        <h5><a class="text-orange" href="eligibility.html"><b>Link</b></a> for Eligibility Criteria for appearing in JEE (Advanced) 2027.</h5>
+      </div>
+      <div class="text-end"><span class="ann-date">Posted on November 13, 2027, 17:00 IST</span></div>
+    </div>
+    <div class="ann-card display-6 fs-6 text-start mt-3">
+      <h4 class="announcement__head">Examination Date </h4>
+      <div class="announcement__text">
+        <h5>JEE (Advanced) 2027 will be held on May 23, 2027 (Sunday).</h5>
+      </div>
+      <div class="text-end"><span class="ann-date">Posted on November 13, 2027, 17:00 IST</span></div>
+    </div>
+    <div class="ann-card">
+      <h4 class="announcement__head">Scheme</h4>
+      <div class="announcement__text"><h5><a href="javascript:void(0)">Nope</a> something</h5></div>
+    </div>
+    <div class="ann-card">
+      <h4 class="announcement__head">Registration</h4>
+      <div class="announcement__text"><h5>Registration for JEE (Advanced) opens soon.</h5></div>
+      <div class="text-end"><span class="ann-date">Posted on March 4, 2020, 10:00 IST</span></div>
+    </div>
+  </section>
+</body></html>`;
+
+test('JEE Advanced announcements are read from the home page', async () => {
+  const srv = await fixtureServer({ '/': JEEADV_PAGE });
+  try {
+    const { items, errors } = await scrapeJeeAdv({
+      pages: [{ url: `${srv.origin}/`, section: 'Announcements', hints: ['jee'] }],
+    });
+    assert.deepEqual(errors, []);
+    assert.equal(items.length, 4);
+
+    // The informative sentence is the title; the label becomes the section,
+    // matching how the other sources are shaped.
+    const exam = items.find((i) => i.section === 'Examination Date');
+    assert.equal(exam.title, 'JEE (Advanced) 2027 will be held on May 23, 2027 (Sunday).');
+
+    // A plausible month-first stamp is kept. This format is why the shared
+    // date parser learned month-first ordering.
+    const registration = items.find((i) => i.section === 'Registration');
+    assert.equal(registration.publishedAt, '2020-03-04');
+    assert.equal(registration.dateInferred, false);
+
+    // The site stamps current announcements with the exam-cycle year, so they
+    // read as posted in the future. That cannot be a publication date, so it
+    // is discarded and the notice is placed from its neighbours instead --
+    // otherwise it would outrank every real notice forever.
+    assert.notEqual(exam.publishedAt, '2027-11-13');
+    assert.ok(
+      !exam.publishedAt || exam.publishedAt <= new Date().toISOString().slice(0, 10),
+      'a future publication date survived into the feed'
+    );
+
+    // A relative link resolves against the page.
+    const eligibility = items.find((i) => i.section === 'Eligibility Criteria');
+    assert.equal(eligibility.url, `${srv.origin}/eligibility.html`);
+
+    // An announcement with no document of its own still points somewhere real.
+    assert.equal(exam.url, `${srv.origin}/#announcements`);
+
+    assert.deepEqual(exam.hints, ['jee']);
+  } finally {
+    await srv.close();
+  }
+});
+
+test('a JEE Advanced announcement with a javascript: link is not followed', async () => {
+  const srv = await fixtureServer({ '/': JEEADV_PAGE });
+  try {
+    const { items } = await scrapeJeeAdv({ pages: [{ url: `${srv.origin}/` }] });
+    assert.ok(
+      items.every((i) => /^https?:$/.test(new URL(i.url).protocol)),
+      'a non-http(s) scheme reached the store'
+    );
+  } finally {
+    await srv.close();
+  }
+});
+
+test('JEE Advanced reports a layout change rather than failing silently', async () => {
+  const srv = await fixtureServer({ '/': '<html><body><p>Site under maintenance</p></body></html>' });
+  try {
+    const { items, errors } = await scrapeJeeAdv({ pages: [{ url: `${srv.origin}/` }] });
+    assert.equal(items.length, 0);
+    assert.match(errors[0], /parsed 0 notices/);
   } finally {
     await srv.close();
   }
